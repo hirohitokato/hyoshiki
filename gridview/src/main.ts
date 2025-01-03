@@ -1,5 +1,6 @@
-import { createApp } from 'vue'
-import './style.css'
-import App from './App.vue'
+import { createApp } from "vue";
+import "./style.css";
+import App from "./App.vue";
+import Tile from "./components/Tile.vue";
 
-createApp(App).mount('#app')
+createApp(Tile).mount("#app");
