@@ -1,24 +1,21 @@
 <template>
-    <!-- 2つのtransitionを並べ、クロスフェードが起きるようにする -->
     <div class="crossfade-container">
-        <!-- 古いコンテンツを表示するブロック -->
+        <!-- 古いコンテンツ -->
         <transition name="crossfade" @after-leave="onOldContentLeave">
             <div v-if="oldContent" class="content" :key="'old-' + oldContent.key">
                 <!-- 画像 / テキスト 切り替え表示 -->
-                <img v-if="oldContent.isImage" :src="oldContent.value" alt="previous image" />
-                <p v-else>
-                    {{ oldContent.value }}
-                </p>
+                <img v-if="oldContent.isImage" :src="oldContent.value" alt="previous image" class="content-image" />
+                <p v-else>{{ oldContent.value }}</p>
             </div>
         </transition>
 
-        <!-- 新しいコンテンツを表示するブロック -->
+        <!-- 新しいコンテンツ -->
         <transition name="crossfade">
             <div class="content" :key="'new-' + newContent.key">
-                <img v-if="newContent.isImage" :src="newContent.value" alt="new image" />
-                <p v-else>
-                    {{ newContent.value }}
-                </p>
+                <!-- 画像 / テキスト 切り替え表示 -->
+                <img v-if="newContent.isImage" :src="newContent.value" alt="new image" class="content-image"
+                    @load="onImageLoad(newContent.value)" />
+                <p v-else>{{ newContent.value }}</p>
             </div>
         </transition>
     </div>
@@ -34,88 +31,87 @@ interface Props {
 }
 const props = defineProps<Props>();
 
-// 1つのコンテンツを表すインターフェース
 interface ContentData {
-    value: string;   // テキスト or 画像URL
+    value: string;   // 画像URL or テキスト
     isImage: boolean;
-    key: number;     // 表示切り替え用のユニークID
+    key: number;     // 再描画トリガー
 }
 
-// 古いコンテンツと新しいコンテンツを用意
 const oldContent = ref<ContentData | null>(null);
 const newContent = ref<ContentData>({
     value: '',
     isImage: false,
     key: 0,
 });
+let oldImageToFree: string | null = null;
 
-// タイマーを保持
 let fetchTimer: number | undefined;
 
-// サーバーからデータを取得する
+// データ取得
 const fetchData = async () => {
     try {
-        // 同一サーバーから取得する想定。URL例: /api?row=..., column=...
         const url = `http://localhost:8080/api/images/random?row=${props.row}&column=${props.column}`;
         const response = await fetch(url);
         const blob = await response.blob();
 
-        // 画像 or テキスト 判定
-        let isImage = false;
-        let value = '';
-        if (blob.type.startsWith('image/')) {
-            isImage = true;
-            value = URL.createObjectURL(blob);
-        } else {
-            value = await blob.text();
+        const isImage = blob.type.startsWith('image/');
+        const value = isImage ? URL.createObjectURL(blob) : await blob.text();
+
+        // 今までの newContent を oldContent に退避（サーバーは画像のみ想定なら毎回コピーでもOK）
+        if (newContent.value.value) {
+            oldContent.value = { ...newContent.value };
         }
 
-        // ① oldContent に newContent の内容をコピー（もし古いコンテンツがあればフェードアウトして削除）
-        if (newContent.value) {
-            oldContent.value = {
-                value: newContent.value.value,
-                isImage: newContent.value.isImage,
-                key: newContent.value.key,
-            };
-        }
-
-        // ② newContent を最新データに更新（フェードイン）
+        // 新しいデータをセット
         newContent.value = {
             value,
             isImage,
-            key: newContent.value.key + 1, // keyをインクリメントして再描画をトリガー
+            key: Date.now(),
         };
     } catch (error) {
         console.error('Fetch error:', error);
     }
 };
 
-// (10 ± 5) 秒ごとに実行をスケジュール
 const scheduleNextFetch = () => {
-    const interval = 10000 + (Math.random() - 0.5) * 10000; // 5000〜15000ms
+    const interval = (10 + (Math.random() - 0.5) * 10) * 1000; // 5000〜15000ms
     fetchTimer = window.setTimeout(async () => {
         await fetchData();
         scheduleNextFetch();
     }, interval);
 };
 
-// マウント時に最初のデータ取得 & スケジュール開始
 onMounted(() => {
-    fetchData().then(() => {
-        scheduleNextFetch();
-    });
+    fetchData().then(scheduleNextFetch);
 });
 
-// アンマウント時にタイマー停止
 onBeforeUnmount(() => {
     if (fetchTimer) {
         clearTimeout(fetchTimer);
     }
 });
 
-// 古いコンテンツのフェードアウトが終わったらDOMから削除する
+// 新しい画像が読み込まれたら、古い画像をフェードアウトさせる
+const onImageLoad = (url: string) => {
+    if (oldContent.value) {
+        console.log('New image loaded. Start fading out the old image...');
+        if (oldContent.value.isImage) {
+            oldImageToFree = oldContent.value.value;
+        }
+        oldContent.value = null; // これで古い画像が leave へ
+    }
+};
+
+// 古い画像が leave 完了したら呼ばれる
 const onOldContentLeave = () => {
-    oldContent.value = null;
+    // フェードアウトし終わったタイミングで古い Blob URL を解放
+    // oldContent はすでに null なので、削除対象URLは一時保管したほうが安全
+    // しかし今回のコードではとりあえず直前まで持っていた値を参照するか、
+    // もしくは oldContent をローカル変数に保存しておく等の工夫もアリ
+    if (oldImageToFree) {
+        URL.revokeObjectURL(oldImageToFree);
+        console.log('oldContent leave completed. Freed old Blob URL.');
+    }
 };
 </script>
 
@@ -123,13 +119,10 @@ const onOldContentLeave = () => {
 .crossfade-container {
     position: relative;
     width: 400px;
-    /* 適宜 */
     height: 300px;
-    /* 適宜 */
     overflow: hidden;
 }
 
-/* 2つのコンテンツを重ねて表示するため絶対配置 */
 .content {
     position: absolute;
     top: 0;
@@ -138,13 +131,23 @@ const onOldContentLeave = () => {
     height: 100%;
 }
 
-/* クロスフェードアニメーション */
-.crossfade-enter-active,
-.crossfade-leave-active {
-    transition: opacity 2s;
+.content-image {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
 }
 
-/* 初期状態(enter-from)・終了状態(leave-to)を透過 */
+.crossfade-enter-active {
+    transition: opacity 2s;
+    /* フェードイン: 2秒 */
+}
+
+.crossfade-leave-active {
+    transition: opacity 1s;
+    /* フェードアウト: 1秒 */
+}
+
 .crossfade-enter-from,
 .crossfade-leave-to {
     opacity: 0;
