@@ -8,10 +8,11 @@ import fs from "fs";
 // アプリケーションで動作するようにdotenvを設定する
 dotenv.config();
 const app = express();
-
 const PORT = process.env.PORT;
 
-const repository = new ContentsRepository(process.env.CONTENTS_FILEPATH as string);
+const repository = new ContentsRepository(
+  process.env.CONTENTS_FILEPATH as string,
+);
 repository.load();
 
 app.use(cors({
@@ -51,23 +52,26 @@ function validateContentIdInQueryParam() {
 
 function sendFile(request: Request, response: Response, media_id: string) {
   const medium = repository.media[media_id];
-  if (medium) {
-    const filepath = medium.path_url;
-    fs.access(filepath, fs.constants.F_OK, (err) => {
-      if (err) {
-        return response.status(404).json({ error: "File not found" });
-      }
-
-      // ファイルを読み込んで返す
-      response.sendFile(filepath, (err) => {
-        if (err) {
-          response.status(500).json({ error: "Error sending the file" });
-        }
-      });
-    });
-  } else {
-    response.status(404).json({ error: "Image not found" });
+  if (!medium) {
+    return response.status(404).json({ error: "Image not found" });
   }
+  if (medium.type === "text") {
+    return response.send(medium.description);
+  }
+
+  const filepath = medium.path_url;
+  fs.access(filepath, fs.constants.F_OK, (err) => {
+    if (err) {
+      return response.status(404).json({ error: "File not found" });
+    }
+
+    // ファイルを読み込んで返す
+    response.sendFile(filepath, (err) => {
+      if (err) {
+        return response.status(500).json({ error: "Error sending the file" });
+      }
+    });
+  });
 }
 
 function getMediaList(
@@ -75,7 +79,7 @@ function getMediaList(
   response: Response,
   type: string,
   content_id: string | undefined,
-): Object {
+): Object[] {
   const elements = Object.entries(repository.media)
     .filter(([key, value]) => value.type === type)
     .filter(([key, value]) => {
@@ -92,6 +96,21 @@ function getMediaList(
       };
     });
   return elements;
+}
+
+function getMediaType(
+  url_param: string,
+): "image" | "text" | "sound" | undefined {
+  switch (url_param) {
+    case "images":
+      return "image";
+    case "text":
+      return "text";
+    case "sounds":
+      return "sound";
+    default:
+      return undefined;
+  }
 }
 
 // Routes
@@ -143,6 +162,41 @@ app.get(
   },
 );
 
+app.get(
+  "/api/:media_type/random/",
+  validateContentIdInQueryParam(),
+  (request: Request, response: Response) => {
+    const { media_type } = request.params;
+    const errors = validationResult(request);
+    if (!errors.isEmpty()) {
+      response.status(404).json({ error: "content_id is not found" });
+      // response.status(400).json({ errors: errors.array() });
+      return;
+    }
+    const media = getMediaType(media_type);
+    if (!media) {
+      response.status(404).json({
+        error: `the specified media_type(${media_type}) is not supported`,
+      });
+      return;
+    }
+
+    const content_id = request.query.content_id as string; // optional
+    const row = parseInt(request.query.row as string);
+    const col = parseInt(request.query.col as string);
+    const elements = getMediaList(request, response, media, content_id);
+    if (elements.length == 0) {
+      response.status(404).json({
+        error: `the specified media_type(${media_type}) does not exist.`,
+      });
+      return;
+    }
+    const randomIndex = Math.floor(Math.random() * elements.length);
+    const element: any = elements[randomIndex];
+
+    sendFile(request, response, (elements[randomIndex] as any).id);
+  },
+);
 
 app.get(
   "/api/text/",
@@ -161,7 +215,7 @@ app.get(
 );
 
 app.get(
-  "/api/sound/",
+  "/api/sounds/",
   validateContentIdInQueryParam(),
   (request: Request, response: Response) => {
     const errors = validationResult(request);
@@ -171,7 +225,7 @@ app.get(
       return;
     }
     const { content_id } = request.query as { content_id: string }; // optional
-    const elements = getMediaList(request, response, "sound", content_id);
+    const elements = getMediaList(request, response, "sounds", content_id);
     response.json(elements);
   },
 );
@@ -192,7 +246,7 @@ app.get("/api/text/:text_id", (request: Request, response: Response) => {
   response.send(medium.description);
 });
 
-app.get("/api/sound/:sound_id", (request: Request, response: Response) => {
+app.get("/api/sounds/:sound_id", (request: Request, response: Response) => {
   const { sound_id } = request.params;
   sendFile(request, response, sound_id);
 });

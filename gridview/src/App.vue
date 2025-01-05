@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import HelloWorld from './components/HelloWorld.vue'
+import Tile from "./components/Tile.vue";
 </script>
 
 <template>
@@ -11,7 +11,10 @@ import HelloWorld from './components/HelloWorld.vue'
       <img src="./assets/vue.svg" class="logo vue" alt="Vue logo" />
     </a>
   </div>
-  <HelloWorld msg="Vite + Vue" />
+  <div style="width: 600px; height: 400px; border: 1px solid black;">
+    <Tile :row="1" :column="1" />
+    <Tile :row="1" :column="2" />
+  </div>
 </template>
 
 <style scoped>
@@ -21,9 +24,11 @@ import HelloWorld from './components/HelloWorld.vue'
   will-change: filter;
   transition: filter 300ms;
 }
+
 .logo:hover {
   filter: drop-shadow(0 0 2em #646cffaa);
 }
+
 .logo.vue:hover {
   filter: drop-shadow(0 0 2em #42b883aa);
 }
