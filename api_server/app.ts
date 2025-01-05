@@ -1,4 +1,5 @@
 import express, { Request, Response } from "express";
+import cors from "cors";
 import { param, query, validationResult } from "express-validator";
 import dotenv from "dotenv";
 import { Content, ContentsRepository } from "./contents_repository";
@@ -12,6 +13,12 @@ const PORT = process.env.PORT;
 
 const repository = new ContentsRepository(process.env.CONTENTS_FILEPATH as string);
 repository.load();
+
+app.use(cors({
+  origin: "http://localhost:5173",
+  methods: ["GET", "POST"],
+  credentials: true,
+}));
 
 function validateContentIdInParam() {
   return [
