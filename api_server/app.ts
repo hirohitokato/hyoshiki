@@ -2,7 +2,7 @@ import express, { Request, Response } from "express";
 import cors from "cors";
 import { param, query, validationResult } from "express-validator";
 import dotenv from "dotenv";
-import { Content, ContentsRepository } from "./contents_repository";
+import { Content, ContentsRepository } from "./contents_repository.js";
 import fs from "fs";
 
 // アプリケーションで動作するようにdotenvを設定する

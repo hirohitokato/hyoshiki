@@ -1,5 +1,5 @@
 import md5 from "md5";
-import * as xlsx from "xlsx";
+import xlsx from "xlsx";
 
 export class Content {
     /** ID */

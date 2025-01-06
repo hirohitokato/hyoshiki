@@ -1,6 +1,7 @@
 {
   "name": "api_server",
   "version": "1.0.0",
+"type": "module",
   "main": "app.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
