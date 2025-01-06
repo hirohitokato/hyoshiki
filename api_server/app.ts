@@ -3,7 +3,8 @@ import cors from "cors";
 import { param, query, validationResult } from "express-validator";
 import dotenv from "dotenv";
 import { Content, ContentsRepository } from "./contents_repository.js";
-import fs from "fs";
+import { fileTypeFromBuffer } from "file-type";
+import fs from "fs/promises";
 
 // アプリケーションで動作するようにdotenvを設定する
 dotenv.config();
@@ -79,7 +80,7 @@ async function fetchData(media_id: string): Promise<ServerResponse | null> {
     try {
       const data = await fs.readFile(filepath);
       const filetype = await fileTypeFromBuffer(data);
-      // res.mime_type = filetype ? filetype["mime"] : "unknown";
+      res.mime_type = filetype ? filetype["mime"] : "unknown";
       res.data = data.toString("base64");
     } catch (error) {
       return null;
