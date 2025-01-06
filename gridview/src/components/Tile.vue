@@ -30,6 +30,15 @@ interface Props {
 }
 const props = defineProps<Props>();
 
+type ServerResponse = {
+    id: string;
+    media_type: string;
+    mime_type: string;
+    date_time: number;
+    data: string;
+    description: string;
+};
+
 /**
  * コンテンツ情報
  * - value: 画像URL or テキスト
@@ -66,12 +75,12 @@ const fetchData = async () => {
     try {
         const url = `http://localhost:8080/api/text/random?row=${props.row}&column=${props.column}`;
         const response = await fetch(url);
-        const blob = await response.blob();
+        const json = await response.json() as ServerResponse;
 
-        const isImage = blob.type.startsWith('image/');
+        const isImage = json.media_type === "image";
         const value = isImage
-            ? URL.createObjectURL(blob) // 画像用の一時URLを生成
-            : await blob.text();       // テキストを文字列で取得
+            ? `data:${json.mime_type};base64,${json.data}`
+            : json.description;
 
         // まず、今までの newContent を oldContent に退避する
         // → これで古いコンテンツが「フェードアウト用コンポーネント」として表示される
@@ -99,7 +108,7 @@ const fetchData = async () => {
 
 /** (10 ± 5) 秒ごとに自動フェッチをスケジュールする */
 const scheduleNextFetch = () => {
-    const interval = (10 + (Math.random() - 0.5) * 10) * 1000; // 5,000〜15,000 ms
+    const interval = (10 + (Math.random() - 0.5) * 10) * 300; // 5,000〜15,000 ms
     fetchTimer = window.setTimeout(async () => {
         await fetchData();
         scheduleNextFetch();

@@ -50,28 +50,42 @@ function validateContentIdInQueryParam() {
   ];
 }
 
-function sendFile(request: Request, response: Response, media_id: string) {
+type ServerResponse = {
+  id: string;
+  media_type: string;
+  mime_type: string;
+  date_time: number;
+  data: string;
+  description: string;
+};
+
+async function fetchData(media_id: string): Promise<ServerResponse | null> {
   const medium = repository.media[media_id];
   if (!medium) {
-    return response.status(404).json({ error: "Image not found" });
+    return null;
   }
-  if (medium.type === "text") {
-    return response.send(medium.description);
-  }
+
+  let res: ServerResponse = {
+    id: medium.id,
+    media_type: medium.type,
+    mime_type: "unknown",
+    date_time: Date.now(),
+    description: medium.description,
+    data: "",
+  };
 
   const filepath = medium.path_url;
-  fs.access(filepath, fs.constants.F_OK, (err) => {
-    if (err) {
-      return response.status(404).json({ error: "File not found" });
+  if (medium.path_url) {
+    try {
+      const data = await fs.readFile(filepath);
+      const filetype = await fileTypeFromBuffer(data);
+      // res.mime_type = filetype ? filetype["mime"] : "unknown";
+      res.data = data.toString("base64");
+    } catch (error) {
+      return null;
     }
-
-    // ファイルを読み込んで返す
-    response.sendFile(filepath, (err) => {
-      if (err) {
-        return response.status(500).json({ error: "Error sending the file" });
-      }
-    });
-  });
+  }
+  return res;
 }
 
 function getMediaList(
@@ -165,7 +179,7 @@ app.get(
 app.get(
   "/api/:media_type/random/",
   validateContentIdInQueryParam(),
-  (request: Request, response: Response) => {
+  async (request: Request, response: Response) => {
     const { media_type } = request.params;
     const errors = validationResult(request);
     if (!errors.isEmpty()) {
@@ -194,7 +208,8 @@ app.get(
     const randomIndex = Math.floor(Math.random() * elements.length);
     const element: any = elements[randomIndex];
 
-    sendFile(request, response, (elements[randomIndex] as any).id);
+    const res_data = await fetchData((elements[randomIndex] as any).id);
+    response.json(res_data);
   },
 );
 
@@ -231,25 +246,29 @@ app.get(
 );
 
 // 個別のファイルを返す
-app.get("/api/images/:image_id", (request: Request, response: Response) => {
-  const { image_id } = request.params;
-  sendFile(request, response, image_id);
-});
+app.get(
+  "/api/images/:image_id",
+  async (request: Request, response: Response) => {
+    const { image_id } = request.params;
+    const res_data = await fetchData(image_id);
+    response.json(res_data);
+  },
+);
 
-app.get("/api/text/:text_id", (request: Request, response: Response) => {
+app.get("/api/text/:text_id", async (request: Request, response: Response) => {
   const { text_id } = request.params;
-  const medium = repository.media[text_id];
-  if (!medium) {
-    response.status(404).json({ error: "Text not found" });
-    return;
-  }
-  response.send(medium.description);
+  const res_data = await fetchData(text_id);
+  response.json(res_data);
 });
 
-app.get("/api/sounds/:sound_id", (request: Request, response: Response) => {
-  const { sound_id } = request.params;
-  sendFile(request, response, sound_id);
-});
+app.get(
+  "/api/sounds/:sound_id",
+  async (request: Request, response: Response) => {
+    const { sound_id } = request.params;
+    const res_data = await fetchData(sound_id);
+    response.json(res_data);
+  },
+);
 
 app.listen(PORT, () => {
   console.log("Server running at PORT: ", PORT);
