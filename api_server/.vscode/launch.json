@@ -4,14 +4,15 @@
         {
             "type": "node",
             "request": "launch",
-            "name": "Launch app.ts",
+            "name": "Launch server.ts",
             "skipFiles": [
                 "<node_internals>/**"
             ],
-            "program": "${workspaceFolder}/app.ts",
+            "program": "${workspaceFolder}/src/server.ts",
             "preLaunchTask": "compile typescript",
+            
             "outFiles": [
-                "${workspaceFolder}/dist/**/*.js"
+                "${workspaceFolder}/dist/*.js"
             ]
         }
     ]

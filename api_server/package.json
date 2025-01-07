@@ -5,7 +5,7 @@
   "main": "src/server.ts",
   "scripts": {
     "start": "tsc && node dist/server.js",
-    "dev": "ts-node src/server.ts"
+    "dev": "ts-node --project tsconfig.json --esm src/server.ts  --trace-warnings  --trace-deprecation "
   },
   "keywords": [],
   "author": "",
@@ -24,10 +24,10 @@
     "@types/cors": "^2.8.17",
     "@types/dotenv": "^6.1.1",
     "@types/express": "^5.0.0",
-    "@types/express-validator": "^2.20.33",
     "@types/file-type": "^10.6.0",
     "@types/md5": "^2.3.5",
     "@types/xlsx": "^0.0.35",
+    "ts-node": "^10.9.2",
     "typescript": "^5.7.2"
   }
 }
