@@ -2,5 +2,11 @@
   "deno.enablePaths": [
     "./"
   ],
-  "editor.inlayHints.enabled": "off"
+  "deno.enable": true,
+  "editor.inlayHints.enabled": "off",
+  "deno.lint": true,
+  "editor.formatOnSave": true,
+  "[typescript]": {
+    "editor.defaultFormatter": "denoland.vscode-deno"
+  }
 }
