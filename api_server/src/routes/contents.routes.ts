@@ -1,10 +1,9 @@
 import { Context, Hono } from "hono";
-import { appendTrailingSlash } from "hono/trailing-slash";
 import { validatorForContentIdInParam } from "../validators/contentValidators.ts";
 import { repository } from "../repositories/index.ts";
 
 const router = new Hono();
-router.use(appendTrailingSlash());
+
 /**
  * GET /api/contents
  * - コンテンツのダイジェスト一覧を返す
@@ -28,7 +27,7 @@ router.get("/", (c: Context) => {
  */
 router.get(
   "/:content_id",
-  // validatorForContentIdInParam(),
+  validatorForContentIdInParam,
   (c: Context) => {
     const { content_id } = c.req.param();
     const content = repository.contents[content_id];

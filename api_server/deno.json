@@ -4,6 +4,7 @@
     "test": "deno test -A --unstable"
   },
   "imports": {
+    "mod": "https://deno.land/std/dotenv/mod.ts",
     "zod": "npm:zod",
     "hono": "npm:hono",
     "@hono/zod-validator": "npm:@hono/zod-validator",

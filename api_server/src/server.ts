@@ -6,8 +6,7 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { registerRoutes } from "./routes/index.ts";
-import { load } from "https://deno.land/std/dotenv/mod.ts";
-import { repository } from "./repositories/index.ts";
+import { load } from "mod";
 
 // Honoアプリを生成
 const app = new Hono({ strict: false });

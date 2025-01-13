@@ -13,33 +13,27 @@ export const contentIdSchema = z.object({
   ),
 });
 
-export const validatorForContentIdInParam = () => {
-  const validator = zValidator("param", contentIdSchema);
-  return async (c: Context, next: () => Promise<void>) => {
-    let error: Error | null = null;
-    const result = await validator(c);
-    // zValidator を実行
-    if (result && !result.ok) {
+/**
+ * URLパスパラメータの中に正しいコンテンツIDが含まれているかどうか
+ */
+export const validatorForContentIdInParam = zValidator(
+  "param",
+  contentIdSchema,
+  (result, c: Context) => {
+    if (!result.success) {
       // エラー処理をカスタマイズ
-      return c.text("Invalid request.", 404);
+      return c.json({ error: "Invalid エラー request." }, 404);
     }
-    return next(); // 次のミドルウェアに進む
-  };
-};
-// export const validatorForContentIdInParam = zValidator(
-//   "param",
-//   contentIdSchema,
-//   (result, c) => {
-//     if (!result.success) {
-//       return c.text("Content ID is not found.", 404);
-//     }
-//   },
-// );
+  },
+);
 
+/**
+ * URLクエリパラメータの中に正しいコンテンツIDが含まれているかどうか
+ */
 export const validatorContentIdInQueryParam = zValidator(
   "query",
   contentIdSchema,
-  (result, c) => {
+  (result, c: Context) => {
     if (!result.success) {
       return c.text("Content ID in query parameter is not found.", 404);
     }
