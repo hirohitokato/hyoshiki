@@ -5,6 +5,7 @@
   },
   "imports": {
     "mod": "https://deno.land/std/dotenv/mod.ts",
+    "file-type": "npm:file-type",
     "zod": "npm:zod",
     "hono": "npm:hono",
     "@hono/zod-validator": "npm:@hono/zod-validator",

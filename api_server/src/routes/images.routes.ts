@@ -1,29 +1,22 @@
-// import { Context, Hono } from "hono";
-// import { validationResult } from "express-validator";
-// import { validateContentIdInQueryParam } from "../validators/contentValidators.js";
-// import { fetchData, getMediaList } from "../services/mediaService.js";
+import { Context, Hono } from "hono";
+import { validatorContentIdInQueryParam } from "../validators/contentValidators.ts";
+import { fetchData, getMediaList } from "../services/mediaService.ts";
 
-// const router = Router();
+const router = new Hono();
 
-// /**
-//  * GET /api/images
-//  * - 画像リストを返す（content_id がクエリにあれば、そのコンテンツに紐づくものだけ）
-//  */
-// router.get(
-//   "/",
-//   validateContentIdInQueryParam(),
-//   (req: Request, res: Response, next: NextFunction) => {
-//     const errors = validationResult(req);
-//     if (!errors.isEmpty()) {
-//       res.status(404).json({ error: "content_id is not found" });
-//       return;
-//     }
-
-//     const { content_id } = req.query as { content_id?: string };
-//     const elements = getMediaList("image", content_id);
-//     res.json(elements);
-//   },
-// );
+/**
+ * GET /api/images
+ * - 画像リストを返す（content_id がクエリにあれば、そのコンテンツに紐づくものだけ）
+ */
+router.get(
+  "/",
+  validatorContentIdInQueryParam,
+  (c: Context) => {
+    const { content_id } = c.req.query() as { content_id?: string };
+    const elements = getMediaList("image", content_id);
+    return c.json(elements);
+  },
+);
 
 // /**
 //  * GET /api/images/:image_id
@@ -39,4 +32,4 @@
 //   res.json(data);
 // });
 
-// export default router;
+export default router;

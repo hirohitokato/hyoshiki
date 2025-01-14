@@ -4,15 +4,17 @@
  * - fsを用いた実ファイルの読み込みなどを担当
  */
 
-import fs from "fs/promises";
 import { fileTypeFromBuffer } from "file-type";
-import { repository } from "../repositories/index.js"; // シングルトン的に使う
-import { IServerResponse, MediaType } from "../types/index.js";
+import { repository } from "../repositories/index.ts"; // シングルトン的に使う
+import { IServerResponse, MediaType } from "../types/index.ts";
+import { encodeBase64 } from "jsr:@std/encoding/base64";
 
 /**
  * メディアIDをもとに、ファイルを読み込み、Base64化したデータを返す
  */
-export async function fetchData(media_id: string): Promise<IServerResponse | null> {
+export async function fetchData(
+  media_id: string,
+): Promise<IServerResponse | null> {
   const medium = repository.media[media_id];
   if (!medium) {
     return null;
@@ -29,12 +31,12 @@ export async function fetchData(media_id: string): Promise<IServerResponse | nul
 
   if (medium.path_url) {
     try {
-      const fileBuffer = await fs.readFile(medium.path_url);
+      const fileBuffer = await Deno.readFile(medium.path_url);
       const filetype = await fileTypeFromBuffer(fileBuffer);
       // MIMEタイプを特定
       responseData.mime_type = filetype ? filetype.mime : "unknown";
       // Base64に変換
-      responseData.data = fileBuffer.toString("base64");
+      responseData.data = encodeBase64("base64");
     } catch (error) {
       // ファイルが読めなかった場合は null を返す
       return null;
@@ -51,16 +53,17 @@ export async function fetchData(media_id: string): Promise<IServerResponse | nul
  */
 export function getMediaList(
   type: MediaType,
-  content_id?: string
+  content_id?: string,
 ): object[] {
   return Object.entries(repository.media)
     .filter(([_, media]) => media.type === type)
     .filter(([_, media]) => {
       // content_id が指定されていれば、そのコンテンツのメディアに限定
-      if (!content_id) return true;
-      const content = repository.contents[content_id];
-      if (!content) return false;
-      return content.media.some((m) => m.id === media.id);
+      if (!content_id) {
+        return true;
+      } else {
+        return media.content_id === content_id;
+      }
     })
     .map(([_, media]) => {
       return {
@@ -75,7 +78,9 @@ export function getMediaList(
 /**
  * URLのパラメータ "/api/:media_type" に応じて、内部で扱うメディアタイプを判定
  */
-export function resolveMediaType(urlParam: string): "image" | "text" | "sound" | undefined {
+export function resolveMediaType(
+  urlParam: string,
+): "image" | "text" | "sound" | undefined {
   switch (urlParam) {
     case "images":
       return "image";

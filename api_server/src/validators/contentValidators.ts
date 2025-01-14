@@ -7,10 +7,16 @@ import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 import { repository } from "../repositories/index.ts";
 
-export const contentIdSchema = z.object({
-  content_id: z.string().refine(
-    (id) => id in repository.contents,
-  ),
+const contentIdAtom = z.string().refine(
+  (id) => id in repository.contents,
+);
+
+const contentIdSchema = z.object({
+  content_id: contentIdAtom,
+});
+
+const contentIdOrUndefinedSchema = z.object({
+  content_id: z.union([contentIdAtom, z.undefined()]),
 });
 
 /**
@@ -32,7 +38,7 @@ export const validatorForContentIdInParam = zValidator(
  */
 export const validatorContentIdInQueryParam = zValidator(
   "query",
-  contentIdSchema,
+  contentIdOrUndefinedSchema,
   (result, c: Context) => {
     if (!result.success) {
       return c.text("Content ID in query parameter is not found.", 404);
