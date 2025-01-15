@@ -7,16 +7,17 @@
 import { fileTypeFromBuffer } from "file-type";
 import { repository } from "../repositories/index.ts"; // シングルトン的に使う
 import { IServerResponse, MediaType } from "../types/index.ts";
-import { encodeBase64 } from "jsr:@std/encoding/base64";
+import * as base64 from "base64";
 
 /**
  * メディアIDをもとに、ファイルを読み込み、Base64化したデータを返す
  */
 export async function fetchData(
+  media_type: string,
   media_id: string,
 ): Promise<IServerResponse | null> {
   const medium = repository.media[media_id];
-  if (!medium) {
+  if (!medium || medium.type !== media_type) {
     return null;
   }
 
@@ -36,7 +37,7 @@ export async function fetchData(
       // MIMEタイプを特定
       responseData.mime_type = filetype ? filetype.mime : "unknown";
       // Base64に変換
-      responseData.data = encodeBase64("base64");
+      responseData.data = base64.fromUint8Array(fileBuffer) ?? null;
     } catch (error) {
       // ファイルが読めなかった場合は null を返す
       return null;

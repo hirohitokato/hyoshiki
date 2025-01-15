@@ -9,7 +9,8 @@
     "zod": "npm:zod",
     "hono": "npm:hono",
     "@hono/zod-validator": "npm:@hono/zod-validator",
-    "xlsx": "https://cdn.sheetjs.com/xlsx-0.19.2/package/xlsx.mjs"
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.19.2/package/xlsx.mjs",
+    "base64": "https://denopkg.com/chiefbiiko/base64/mod.ts"
   },
   "compilerOptions": {
     "jsx": "precompile",
