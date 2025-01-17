@@ -50,6 +50,7 @@ export async function fetchData(
       responseData.data = base64.fromUint8Array(fileBuffer) ?? null;
     } catch (error) {
       // ファイルが読めなかった場合は null を返す
+      console.error(error);
       return null;
     }
   }

@@ -16,8 +16,22 @@
                 "run",
                 // "--unstable",
                 "--inspect-wait",
-                // "--allow-all"
             ],
+        },
+        {
+            "request": "launch",
+            "name": "Deno test debug",
+            "type": "node",
+            "program": "${workspaceFolder}/src/tests/routes.test.ts",
+            "cwd": "${workspaceFolder}",
+            "env": {},
+            "runtimeExecutable": "/opt/homebrew/bin/deno",
+            "runtimeArgs": [
+                "run",
+                "test",
+                "--inspect-wait",
+            ],
+            "attachSimplePort": 9229
         }
     ]
 }
