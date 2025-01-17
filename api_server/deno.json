@@ -1,6 +1,6 @@
 {
   "tasks": {
-    "dev": "deno run --env --allow-env --allow-net src/server.ts",
+    "dev": "deno run --env=./src/.env --allow-env --allow-import --allow-read --allow-net src/server.ts",
     "test": "deno test -A --unstable"
   },
   "imports": {
