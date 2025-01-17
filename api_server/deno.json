@@ -4,7 +4,7 @@
     "test": "deno test -A --unstable"
   },
   "imports": {
-    "mod": "https://deno.land/std/dotenv/mod.ts",
+    "mod": "https://deno.land/std@0.224.0/dotenv/mod.ts",
     "file-type": "npm:file-type",
     "zod": "npm:zod",
     "hono": "npm:hono",

@@ -10,6 +10,16 @@ import { IServerResponse, MediaType } from "../types/index.ts";
 import * as base64 from "base64";
 
 /**
+ * getMediaList()が返すデータ型
+ */
+export interface MediaData {
+  id: string;
+  content_id: string;
+  type: MediaType;
+  description?: string;
+}
+
+/**
  * メディアIDをもとに、ファイルを読み込み、Base64化したデータを返す
  */
 export async function fetchData(
@@ -55,7 +65,7 @@ export async function fetchData(
 export function getMediaList(
   type: MediaType,
   content_id?: string,
-): object[] {
+): MediaData[] {
   return Object.entries(repository.media)
     .filter(([_, media]) => media.type === type)
     .filter(([_, media]) => {
