@@ -1,5 +1,5 @@
 import { Content, Media } from "../entity.ts";
-import { IDataReader } from "./iDataReader.ts";
+import { IDataReader } from "./dataReaderInterface.ts";
 
 import { readFileSync, utils } from "xlsx";
 export class ExcelReader implements IDataReader {

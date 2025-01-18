@@ -12,7 +12,7 @@ import { registerRoutes } from "../routes/index.ts";
 // 必要に応じてモックしたいサービスやリポジトリをインポート(ここでは例示のみ)
 import * as mediaService from "../services/mediaService.ts";
 import { repository } from "../repositories/index.ts";
-import { IDataReader } from "../repositories/readers/iDataReader.ts";
+import { IDataReader } from "../repositories/readers/dataReaderInterface.ts";
 import { Content, Media } from "../repositories/entity.ts";
 
 /**

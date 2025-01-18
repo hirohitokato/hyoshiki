@@ -6,18 +6,8 @@
 
 import { fileTypeFromBuffer } from "file-type";
 import { repository } from "../repositories/index.ts"; // シングルトン的に使う
-import { IServerResponse, MediaType } from "../types/index.ts";
+import { IServerResponse, MediaData, MediaType } from "../types/index.ts";
 import * as base64 from "base64";
-
-/**
- * getMediaList()が返すデータ型
- */
-export interface MediaData {
-  id: string;
-  content_id: string;
-  type: MediaType;
-  description?: string;
-}
 
 /**
  * メディアIDをもとに、ファイルを読み込み、Base64化したデータを返す

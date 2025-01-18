@@ -4,7 +4,7 @@
  */
 
 import { Content, Media } from "./entity.ts";
-import { IDataReader } from "./readers/iDataReader.ts";
+import { IDataReader } from "./readers/dataReaderInterface.ts";
 
 /**
  * ContentsRepository
