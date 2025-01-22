@@ -1,6 +1,6 @@
 import { Content, Media } from "../entity.ts";
 
-export interface IDataReader {
+export interface ContentReader {
   readData(): Promise<{
     media: { [key: string]: Media };
     contents: { [key: string]: Content };

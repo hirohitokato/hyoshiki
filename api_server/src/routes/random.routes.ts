@@ -4,11 +4,8 @@
  */
 import { Context, Hono } from "hono";
 import { validatorContentIdInQueryParam } from "../validators/contentValidators.ts";
-import {
-  fetchData,
-  getMediaList,
-  resolveMediaType,
-} from "../services/mediaService.ts";
+import { fetchData } from "../services/mediaService.ts";
+import { repository } from "../repositories/index.ts";
 
 const router = new Hono();
 
@@ -23,7 +20,7 @@ router.get(
     // }
 
     const { media_type } = c.req.param();
-    const media = resolveMediaType(media_type);
+    const media = repository.resolveMediaType(media_type);
     if (!media) {
       return c.json({
         error: `the specified media_type(${media_type}) is not supported`,
@@ -31,7 +28,7 @@ router.get(
     }
 
     const content_id = c.req.query().content_id as string | undefined;
-    const elements = getMediaList(media, content_id);
+    const elements = repository.getMediaList(media, content_id);
     if (elements.length === 0) {
       return c.json({
         error: `the specified media_type(${media_type}) does not exist.`,

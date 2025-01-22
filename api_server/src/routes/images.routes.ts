@@ -1,6 +1,7 @@
 import { Context, Hono } from "hono";
 import { validatorContentIdInQueryParam } from "../validators/contentValidators.ts";
-import { fetchData, getMediaList } from "../services/mediaService.ts";
+import { fetchData } from "../services/mediaService.ts";
+import { repository } from "../repositories/index.ts";
 
 const router = new Hono();
 
@@ -13,7 +14,7 @@ router.get(
   validatorContentIdInQueryParam,
   (c: Context) => {
     const { content_id } = c.req.query() as { content_id?: string };
-    const elements = getMediaList("image", content_id);
+    const elements = repository.getMediaList("image", content_id);
     return c.json(elements);
   },
 );

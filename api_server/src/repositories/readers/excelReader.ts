@@ -1,8 +1,8 @@
 import { Content, Media } from "../entity.ts";
-import { IDataReader } from "./dataReaderInterface.ts";
-
+import { ContentReader } from "./contentReader.ts";
 import { readFileSync, utils } from "xlsx";
-export class ExcelReader implements IDataReader {
+
+export class ExcelReader implements ContentReader {
   private static CONTENTS_SHEETNAME = "コンテンツ";
   private static MEDIA_SHEETNAME = "メディア";
 

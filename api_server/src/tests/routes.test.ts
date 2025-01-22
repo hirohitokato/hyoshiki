@@ -12,7 +12,7 @@ import { registerRoutes } from "../routes/index.ts";
 // 必要に応じてモックしたいサービスやリポジトリをインポート(ここでは例示のみ)
 import * as mediaService from "../services/mediaService.ts";
 import { repository } from "../repositories/index.ts";
-import { IDataReader } from "../repositories/readers/dataReaderInterface.ts";
+import { ContentReader } from "../repositories/readers/contentReader.ts";
 import { Content, Media } from "../repositories/entity.ts";
 
 /**
@@ -24,7 +24,7 @@ function createTestApp() {
   return app;
 }
 
-class DummyReader implements IDataReader {
+class DummyReader implements ContentReader {
   async readData(): Promise<
     { media: { [key: string]: Media }; contents: { [key: string]: Content } }
   > {
