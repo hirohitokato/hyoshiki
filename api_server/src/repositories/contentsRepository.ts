@@ -5,7 +5,7 @@
 
 import { MediaData, MediaType } from "../types/index.ts";
 import { Content, Media } from "./entity.ts";
-import { ContentReader } from "./readers/contentReader.ts";
+import { ContentReader } from "./readers/dataReaderInterface.ts";
 
 /**
  * ContentsRepository

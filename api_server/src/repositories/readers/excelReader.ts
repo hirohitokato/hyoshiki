@@ -1,5 +1,5 @@
 import { Content, Media } from "../entity.ts";
-import { ContentReader } from "./contentReader.ts";
+import { ContentReader } from "./dataReaderInterface.ts";
 import { readFileSync, utils } from "xlsx";
 
 export class ExcelReader implements ContentReader {
