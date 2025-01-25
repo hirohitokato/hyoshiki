@@ -23,7 +23,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount } from 'vue';
+import { ref, watch, onMounted } from 'vue';
 import { marked } from "marked";
 
 // Props: 親コンポーネントから row, column を受け取る想定
@@ -62,7 +62,6 @@ const newContent = ref<ContentData>({
     isImage: false,
     key: 0,
 });
-// let markdownToHtml = ref<string | null>(null);
 
 /**
  * フェードアウト後に解放すべき画像URLを一時保存する。
@@ -70,9 +69,6 @@ const newContent = ref<ContentData>({
  * leave トランジション完了時にここから revoke する。
  */
 let oldImageToFree: string | null = null;
-
-/** 次回フェッチのタイマーID */
-let fetchTimer: number | undefined;
 
 marked.setOptions({
     // sanitizeとhighlightは使っていないので注意
@@ -82,10 +78,19 @@ marked.setOptions({
     silent: false    // trueにするとパースに失敗してもExceptionを投げなくなる
 });
 
+watch(() => props.resource_url, async (newUrl) => {
+    await fetchData(newUrl);
+});
+
+onMounted(async () => {
+    console.log('Mounted Tile component:', props.child_id);
+    await fetchData(props.resource_url);
+});
+
 /** サーバーからランダムに画像 or テキストを取得し、oldContent と newContent を更新する。 */
-const fetchData = async () => {
+const fetchData = async (url: string) => {
     try {
-        const response = await fetch(props.resource_url);
+        const response = await fetch(url);
         const json = await response.json() as ServerResponse;
 
         const isImage = json.media_type === "image";
@@ -117,38 +122,14 @@ const fetchData = async () => {
     }
 };
 
-/** (10 ± 5) 秒ごとに自動フェッチをスケジュールする */
-const scheduleNextFetch = () => {
-    const interval = (10 + (Math.random() - 0.5) * 10) * 300; // 5,000〜15,000 ms
-    fetchTimer = window.setTimeout(async () => {
-        await fetchData();
-        scheduleNextFetch();
-    }, interval);
-};
-
-/** コンポーネントがマウントされたとき、まず初回のデータを取得し、その後、自動フェッチをスケジューリングする。 */
-onMounted(() => {
-    console.log(`Mounted Tile component with ID: ${props.child_id}`);
-    fetchData().then(() => {
-        scheduleNextFetch();
-    });
-});
-
-/** コンポーネントがアンマウントされるとき、タイマーを停止 */
-onBeforeUnmount(() => {
-    if (fetchTimer) {
-        clearTimeout(fetchTimer);
-    }
-});
-
 const tileContainer = ref<HTMLElement | null>(null);
 
 /** 新しい画像が読み込まれたとき、古いコンテンツをフェードアウト開始する（画像のロード待ちのため） */
 const onImageLoad = () => {
-    const img = event.target as HTMLImageElement;
+    const img = event?.target as HTMLImageElement;
     if (tileContainer.value) {
-     tileContainer.value.style.height = `${img.naturalHeight * (tileContainer.value.clientWidth / img.naturalWidth)}px`;
-   }
+        tileContainer.value.style.height = `${img.naturalHeight * (tileContainer.value.clientWidth / img.naturalWidth)}px`;
+    }
     startFadeOutOldContent();
 };
 

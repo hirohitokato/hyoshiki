@@ -2,7 +2,6 @@
 import Tiles from "./components/Tiles.vue";
 import { getQueryParam } from "./composables/getQueryParam.ts";
 
-const params = new URLSearchParams(window.location.search);
 // URLパラメータから要素数、列数を取得。リアクティブな管理は不要なのでrefを使わない
 const numTiles = getQueryParam("num_tiles", 10);
 const columns = getQueryParam("num_columns", 4);

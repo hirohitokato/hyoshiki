@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed } from 'vue';
+import { onMounted, onBeforeUnmount } from "vue";
 import Tile from "./Tile.vue";
 
 const props = defineProps({
@@ -7,17 +8,37 @@ const props = defineProps({
   num_tiles: { type: Number, default: 8 },
 });
 
-// resourceUrls と childComponents を動的に生成
-const resourceUrls = computed(() => {
-  const urls: Record<number, string> = {};
-  for (let i = 0; i < props.num_tiles; i++) {
-    urls[i+1] = 'http://localhost:8000/api/images/random';
+// 画像URLの一時保存先。Tileコンポーネントに渡す
+const imageUrls = ref<Record<number, string>>({});
+const interval = 5 * 1000;
+let fetchTimer: number | undefined;
+
+const fetchImageList = async () => {
+  try {
+    const url = "http://localhost:8000/api/images/";
+    const response = await fetch(url);
+    const data = await response.json();
+
+    const urls = data.map((item) => { return { id: item.id, url: `${url}${item.id}?t=${Date.now()}` } });
+    // 配列をシャッフルする関数(一時的なもの)
+    urls.sort(() => Math.random() - 0.5);
+    for (let i = 0; i < props.num_tiles; i++) {
+      imageUrls.value[i] = urls[i % urls.length].url;
+    }
+  } catch (error) {
+    console.error('Failed to fetch image list:', error);
   }
-  return urls;
+};
+
+onMounted(() => {
+  fetchImageList();
+  fetchTimer = setInterval(fetchImageList, interval);
 });
 
-const childComponents = computed(() => {
-  return Array.from({ length: props.num_tiles }, (_, index) => ({ id: index + 1 }));
+onBeforeUnmount(() => {
+  if (fetchTimer) {
+    clearInterval(fetchTimer);
+  }
 });
 
 const gridStyle = computed(() => ({
@@ -29,8 +50,7 @@ const gridStyle = computed(() => ({
 
 <template>
   <div :style="gridStyle" class="tiles-container">
-    <Tile v-for="child in childComponents" :child_id="child.id" :resource_url="resourceUrls[child.id]"
-      style="width: 100%;" />
+    <Tile v-for="(url, id) in imageUrls" :child_id="Number(id)" :resource_url="url" style="width: 100%;" />
   </div>
 </template>
 
