@@ -1,5 +1,11 @@
 <script setup lang="ts">
 import Tiles from "./components/Tiles.vue";
+import { getQueryParam } from "./composables/getQueryParam.ts";
+
+const params = new URLSearchParams(window.location.search);
+// URLパラメータから要素数、列数を取得。リアクティブな管理は不要なのでrefを使わない
+const numTiles = getQueryParam("num_tiles", 10);
+const columns = getQueryParam("num_columns", 4);
 </script>
 
 <template>
@@ -12,7 +18,7 @@ import Tiles from "./components/Tiles.vue";
     </a>
   </div>
   <div style="width: 100vw; height: 400px; border: 1px solid black;">
-    <Tiles />
+    <Tiles  :num_tiles="numTiles" :columns="columns" />
   </div>
 </template>
 

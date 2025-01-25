@@ -1,5 +1,5 @@
 <template>
-    <div class="crossfade-container">
+    <div ref="tileContainer" class="crossfade-container">
         <!-- 古いコンテンツ（フェードアウト用） -->
         <transition name="crossfade" @after-leave="onOldContentLeave">
             <div v-if="oldContent" class="content" :key="'old-' + oldContent.key">
@@ -141,8 +141,14 @@ onBeforeUnmount(() => {
     }
 });
 
+const tileContainer = ref<HTMLElement | null>(null);
+
 /** 新しい画像が読み込まれたとき、古いコンテンツをフェードアウト開始する（画像のロード待ちのため） */
 const onImageLoad = () => {
+    const img = event.target as HTMLImageElement;
+    if (tileContainer.value) {
+     tileContainer.value.style.height = `${img.naturalHeight * (tileContainer.value.clientWidth / img.naturalWidth)}px`;
+   }
     startFadeOutOldContent();
 };
 
@@ -179,7 +185,7 @@ const onOldContentLeave = () => {
 .crossfade-container {
     position: relative;
     width: 100%;
-    height: 100%;
+    height: auto;
     overflow: hidden;
 }
 
@@ -194,7 +200,7 @@ const onOldContentLeave = () => {
 /* 画像の場合はアスペクト比を維持しつつ見切れないようにする */
 .content-image {
     width: 100%;
-    height: 100%;
+    height: auto;
     object-fit: contain;
     display: block;
 }

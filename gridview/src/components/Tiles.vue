@@ -2,23 +2,24 @@
 import { ref, computed } from 'vue'
 import Tile from "./Tile.vue";
 
-const resourceUrls = ref<Record<number, string>>({
-  1: 'http://localhost:8000/api/images/random',
-  2: 'http://localhost:8000/api/images/random',
-  3: 'http://localhost:8000/api/images/random',
-  4: 'http://localhost:8000/api/images/random',
-})
-
-const childComponents = ref<Record<string, number>[]>([
-  { id: 1 },
-  { id: 2 },
-  { id: 3 },
-  { id: 4 },
-]);
-
 const props = defineProps({
   columns: { type: Number, default: 5 },
+  num_tiles: { type: Number, default: 8 },
 });
+
+// resourceUrls と childComponents を動的に生成
+const resourceUrls = computed(() => {
+  const urls: Record<number, string> = {};
+  for (let i = 0; i < props.num_tiles; i++) {
+    urls[i+1] = 'http://localhost:8000/api/images/random';
+  }
+  return urls;
+});
+
+const childComponents = computed(() => {
+  return Array.from({ length: props.num_tiles }, (_, index) => ({ id: index + 1 }));
+});
+
 const gridStyle = computed(() => ({
   display: 'grid',
   gridTemplateColumns: `repeat(${props.columns}, 1fr)`,
@@ -29,19 +30,12 @@ const gridStyle = computed(() => ({
 <template>
   <div :style="gridStyle" class="tiles-container">
     <Tile v-for="child in childComponents" :child_id="child.id" :resource_url="resourceUrls[child.id]"
-      style="width: 200px; height: 200px;" />
+      style="width: 100%;" />
   </div>
 </template>
 
 <style scoped>
 .tiles-container {
   width: 100%;
-}
-
-.tile {
-  aspect-ratio: 1 / 1;
-  /* 正方形を維持 */
-  background-color: #f0f0f0;
-  border: 1px solid #ccc;
 }
 </style>
