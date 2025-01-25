@@ -1,41 +1,47 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
+import Tile from "./Tile.vue";
 
-defineProps<{ msg: string }>()
+const resourceUrls = ref<Record<number, string>>({
+  1: 'http://localhost:8000/api/images/random',
+  2: 'http://localhost:8000/api/images/random',
+  3: 'http://localhost:8000/api/images/random',
+  4: 'http://localhost:8000/api/images/random',
+})
 
-const count = ref(0)
+const childComponents = ref<Record<string, number>[]>([
+  { id: 1 },
+  { id: 2 },
+  { id: 3 },
+  { id: 4 },
+]);
+
+const props = defineProps({
+  columns: { type: Number, default: 5 },
+});
+const gridStyle = computed(() => ({
+  display: 'grid',
+  gridTemplateColumns: `repeat(${props.columns}, 1fr)`,
+  gap: '1rem',
+}));
 </script>
 
 <template>
-  <h1>{{ msg }}</h1>
-
-  <div class="card">
-    <button type="button" @click="count++">count is {{ count }}</button>
-    <p>
-      Edit
-      <code>components/HelloWorld.vue</code> to test HMR
-    </p>
+  <div :style="gridStyle" class="tiles-container">
+    <Tile v-for="child in childComponents" :child_id="child.id" :resource_url="resourceUrls[child.id]"
+      style="width: 200px; height: 200px;" />
   </div>
-
-  <p>
-    Check out
-    <a href="https://vuejs.org/guide/quick-start.html#local" target="_blank"
-      >create-vue</a
-    >, the official Vue + Vite starter
-  </p>
-  <p>
-    Learn more about IDE Support for Vue in the
-    <a
-      href="https://vuejs.org/guide/scaling-up/tooling.html#ide-support"
-      target="_blank"
-      >Vue Docs Scaling up Guide</a
-    >.
-  </p>
-  <p class="read-the-docs">Click on the Vite and Vue logos to learn more</p>
 </template>
 
 <style scoped>
-.read-the-docs {
-  color: #888;
+.tiles-container {
+  width: 100%;
+}
+
+.tile {
+  aspect-ratio: 1 / 1;
+  /* 正方形を維持 */
+  background-color: #f0f0f0;
+  border: 1px solid #ccc;
 }
 </style>

@@ -5,7 +5,8 @@
             <div v-if="oldContent" class="content" :key="'old-' + oldContent.key">
                 <!-- 画像 / テキスト 切り替え表示 -->
                 <img v-if="oldContent.isImage" :src="oldContent.value" alt="previous image" class="content-image" />
-                <p v-else>{{ oldContent.value }}</p>
+                <div v-else v-html="oldContent.value" class="content-text"></div>
+                <!-- <p v-else>{{ oldContent.value }}</p> -->
             </div>
         </transition>
 
@@ -14,7 +15,8 @@
             <div class="content" :key="'new-' + newContent.key">
                 <img v-if="newContent.isImage" :src="newContent.value" alt="new image" class="content-image"
                     @load="onImageLoad" />
-                <p v-else>{{ newContent.value }}</p>
+                <div v-else v-html="newContent.value" class="content-text"></div>
+                <!-- <p v-else>{{ newContent.value }}</p> -->
             </div>
         </transition>
     </div>
@@ -22,11 +24,12 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount } from 'vue';
+import { marked } from "marked";
 
 // Props: 親コンポーネントから row, column を受け取る想定
-interface Props {
-    row: number;
-    column: number;
+type Props = {
+    child_id: number;
+    resource_url: string;
 }
 const props = defineProps<Props>();
 
@@ -45,7 +48,7 @@ type ServerResponse = {
  * - isImage: value が画像URLかどうか
  * - key: 再描画トリガー
  */
-interface ContentData {
+type ContentData = {
     value: string;
     isImage: boolean;
     key: number;
@@ -59,6 +62,7 @@ const newContent = ref<ContentData>({
     isImage: false,
     key: 0,
 });
+// let markdownToHtml = ref<string | null>(null);
 
 /**
  * フェードアウト後に解放すべき画像URLを一時保存する。
@@ -70,17 +74,24 @@ let oldImageToFree: string | null = null;
 /** 次回フェッチのタイマーID */
 let fetchTimer: number | undefined;
 
+marked.setOptions({
+    // sanitizeとhighlightは使っていないので注意
+    pedantic: false, // trueの場合はmarkdown.plに準拠する gfmを使用する場合はfalseで大丈夫
+    gfm: true,       // GitHub Flavored Markdownを使用
+    breaks: true,    // falseにすると改行入力は末尾の半角スペース2つになる
+    silent: false    // trueにするとパースに失敗してもExceptionを投げなくなる
+});
+
 /** サーバーからランダムに画像 or テキストを取得し、oldContent と newContent を更新する。 */
 const fetchData = async () => {
     try {
-        const url = `http://localhost:8080/api/text/random?row=${props.row}&column=${props.column}`;
-        const response = await fetch(url);
+        const response = await fetch(props.resource_url);
         const json = await response.json() as ServerResponse;
 
         const isImage = json.media_type === "image";
         const value = isImage
             ? `data:${json.mime_type};base64,${json.data}`
-            : json.description;
+            : await marked(json.description);
 
         // まず、今までの newContent を oldContent に退避する
         // → これで古いコンテンツが「フェードアウト用コンポーネント」として表示される
@@ -117,6 +128,7 @@ const scheduleNextFetch = () => {
 
 /** コンポーネントがマウントされたとき、まず初回のデータを取得し、その後、自動フェッチをスケジューリングする。 */
 onMounted(() => {
+    console.log(`Mounted Tile component with ID: ${props.child_id}`);
     fetchData().then(() => {
         scheduleNextFetch();
     });
@@ -185,6 +197,10 @@ const onOldContentLeave = () => {
     height: 100%;
     object-fit: contain;
     display: block;
+}
+
+.content-text {
+    font-size: xx-large;
 }
 
 /* クロスフェードアニメーション */
