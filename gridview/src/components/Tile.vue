@@ -1,27 +1,3 @@
-<template>
-    <div ref="tileContainer" class="crossfade-container">
-        <!-- 古いコンテンツ（フェードアウト用） -->
-        <transition name="crossfade" @after-leave="onOldContentLeave">
-            <div v-if="oldContent" class="content" :key="'old-' + oldContent.key">
-                <!-- 画像 / テキスト 切り替え表示 -->
-                <img v-if="oldContent.isImage" :src="oldContent.value" alt="previous image" class="content-image" />
-                <div v-else v-html="oldContent.value" class="content-text"></div>
-                <!-- <p v-else>{{ oldContent.value }}</p> -->
-            </div>
-        </transition>
-
-        <!-- 新しいコンテンツ（フェードイン用） -->
-        <transition name="crossfade">
-            <div class="content" :key="'new-' + newContent.key">
-                <img v-if="newContent.isImage" :src="newContent.value" alt="new image" class="content-image"
-                    @load="onImageLoad" />
-                <div v-else v-html="newContent.value" class="content-text"></div>
-                <!-- <p v-else>{{ newContent.value }}</p> -->
-            </div>
-        </transition>
-    </div>
-</template>
-
 <script setup lang="ts">
 import { ref, watch, onMounted } from 'vue';
 import { marked } from "marked";
@@ -33,6 +9,7 @@ type Props = {
 }
 const props = defineProps<Props>();
 
+/** サーバーから取得したコンテンツ情報 */
 type ServerResponse = {
     id: string;
     media_type: string;
@@ -63,6 +40,9 @@ const newContent = ref<ContentData>({
     key: 0,
 });
 
+/** テンプレート内タイルコンテナ(div)への参照 */
+const tileContainer = ref<HTMLElement | null>(null);
+
 /**
  * フェードアウト後に解放すべき画像URLを一時保存する。
  * oldContent.value を null にした後は参照が失われるため、
@@ -82,13 +62,35 @@ watch(() => props.resource_url, async (newUrl) => {
     await fetchData(newUrl);
 });
 
+/** コンポーネントがマウントされたら、初回データを取得する */
 onMounted(async () => {
     console.log('Mounted Tile component:', props.child_id);
     await fetchData(props.resource_url);
 });
 
+/** 新しい画像が読み込まれたとき、古いコンテンツをフェードアウト開始する（画像のロード待ちのため） */
+const onImageLoad = () => {
+    const img = event?.target as HTMLImageElement;
+    if (tileContainer.value) {
+        tileContainer.value.style.height = `${img.naturalHeight * (tileContainer.value.clientWidth / img.naturalWidth)}px`;
+    }
+    startFadeOutOldContent();
+};
+
+/**
+ * 古いコンテンツのフェードアウトが完了したら呼ばれるフック
+ * - Blob URL を解放し、メモリをリークさせないようにする
+ */
+const onOldContentLeave = () => {
+    if (oldImageToFree) {
+        URL.revokeObjectURL(oldImageToFree);
+        oldImageToFree = null;
+        console.log('Freed old Blob URL on leave.');
+    }
+};
+
 /** サーバーからランダムに画像 or テキストを取得し、oldContent と newContent を更新する。 */
-const fetchData = async (url: string) => {
+async function fetchData(url: string) {
     try {
         const response = await fetch(url);
         const json = await response.json() as ServerResponse;
@@ -122,17 +124,6 @@ const fetchData = async (url: string) => {
     }
 };
 
-const tileContainer = ref<HTMLElement | null>(null);
-
-/** 新しい画像が読み込まれたとき、古いコンテンツをフェードアウト開始する（画像のロード待ちのため） */
-const onImageLoad = () => {
-    const img = event?.target as HTMLImageElement;
-    if (tileContainer.value) {
-        tileContainer.value.style.height = `${img.naturalHeight * (tileContainer.value.clientWidth / img.naturalWidth)}px`;
-    }
-    startFadeOutOldContent();
-};
-
 /**
  * 古いコンテンツをフェードアウト開始する。
  * - oldContent の実体があるなら、その画像URLを `oldImageToFree` に退避
@@ -148,19 +139,31 @@ function startFadeOutOldContent() {
         oldContent.value = null;
     }
 }
-
-/**
- * 古いコンテンツのフェードアウトが完了したら呼ばれるフック
- * - Blob URL を解放し、メモリをリークさせないようにする
- */
-const onOldContentLeave = () => {
-    if (oldImageToFree) {
-        URL.revokeObjectURL(oldImageToFree);
-        oldImageToFree = null;
-        console.log('Freed old Blob URL on leave.');
-    }
-};
 </script>
+
+<template>
+    <div ref="tileContainer" class="crossfade-container">
+        <!-- 古いコンテンツ（フェードアウト用） -->
+        <transition name="crossfade" @after-leave="onOldContentLeave">
+            <div v-if="oldContent" class="content" :key="'old-' + oldContent.key">
+                <!-- 画像 / テキスト 切り替え表示 -->
+                <img v-if="oldContent.isImage" :src="oldContent.value" alt="previous image" class="content-image" />
+                <div v-else v-html="oldContent.value" class="content-text"></div>
+                <!-- <p v-else>{{ oldContent.value }}</p> -->
+            </div>
+        </transition>
+
+        <!-- 新しいコンテンツ（フェードイン用） -->
+        <transition name="crossfade">
+            <div class="content" :key="'new-' + newContent.key">
+                <img v-if="newContent.isImage" :src="newContent.value" alt="new image" class="content-image"
+                    @load="onImageLoad" />
+                <div v-else v-html="newContent.value" class="content-text"></div>
+                <!-- <p v-else>{{ newContent.value }}</p> -->
+            </div>
+        </transition>
+    </div>
+</template>
 
 <style scoped>
 .crossfade-container {
