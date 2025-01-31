@@ -17,7 +17,7 @@ const columns = getQueryParam("num_columns", 4);
     </a>
   </div>
   <div style="width: 100vw; height: 400px; border: 1px solid black;">
-    <Tiles  :num_tiles="numTiles" :columns="columns" />
+    <Tiles :num_tiles="numTiles" :columns="columns" />
   </div>
 </template>
 

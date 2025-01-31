@@ -1,206 +1,163 @@
 <script setup lang="ts">
-import { ref, watch, onMounted } from 'vue';
-import { marked } from "marked";
+import { ref, watch, onMounted, defineEmits } from 'vue';
+import { marked } from 'marked';
 
-// Props: 親コンポーネントから row, column を受け取る想定
 type Props = {
     child_id: number;
     resource_url: string;
 }
 const props = defineProps<Props>();
 
-/** サーバーから取得したコンテンツ情報 */
-type ServerResponse = {
-    id: string;
-    media_type: string;
-    mime_type: string;
-    date_time: number;
-    data: string;
-    description: string;
-};
+// 親コンポーネント(Tiles.vue)へ「画像が読み込まれた」ことを通知する
+const emit = defineEmits(['imageLoaded']);
 
-/**
- * コンテンツ情報
- * - value: 画像URL or テキスト
- * - isImage: value が画像URLかどうか
- * - key: 再描画トリガー
- */
+/** タイルが持つコンテンツデータ */
 type ContentData = {
     value: string;
     isImage: boolean;
     key: number;
-}
+};
 
-/** 古いコンテンツ（フェードアウト対象） */
+/** 古いコンテンツ(フェードアウト対象) */
 const oldContent = ref<ContentData | null>(null);
-/** 新しいコンテンツ（フェードイン対象） */
+/** 新しいコンテンツ(フェードイン対象) */
 const newContent = ref<ContentData>({
     value: '',
     isImage: false,
     key: 0,
 });
 
-/** テンプレート内タイルコンテナ(div)への参照 */
-const tileContainer = ref<HTMLElement | null>(null);
-
-/**
- * フェードアウト後に解放すべき画像URLを一時保存する。
- * oldContent.value を null にした後は参照が失われるため、
- * leave トランジション完了時にここから revoke する。
- */
+/** 古い画像URLの一時退避(メモリ解放用) */
 let oldImageToFree: string | null = null;
 
 marked.setOptions({
-    // sanitizeとhighlightは使っていないので注意
-    pedantic: false, // trueの場合はmarkdown.plに準拠する gfmを使用する場合はfalseで大丈夫
-    gfm: true,       // GitHub Flavored Markdownを使用
-    breaks: true,    // falseにすると改行入力は末尾の半角スペース2つになる
-    silent: false    // trueにするとパースに失敗してもExceptionを投げなくなる
+    gfm: true,
+    breaks: true
 });
 
+/** props.resource_url が変わったら再度fetch */
 watch(() => props.resource_url, async (newUrl) => {
     await fetchData(newUrl);
 });
 
-/** コンポーネントがマウントされたら、初回データを取得する */
+/** 初回マウント時にfetch */
 onMounted(async () => {
-    console.log('Mounted Tile component:', props.child_id);
     await fetchData(props.resource_url);
 });
 
-/** 新しい画像が読み込まれたとき、古いコンテンツをフェードアウト開始する（画像のロード待ちのため） */
-const onImageLoad = () => {
-    const img = event?.target as HTMLImageElement;
-    if (tileContainer.value) {
-        tileContainer.value.style.height = `${img.naturalHeight * (tileContainer.value.clientWidth / img.naturalWidth)}px`;
-    }
-    startFadeOutOldContent();
-};
-
-/**
- * 古いコンテンツのフェードアウトが完了したら呼ばれるフック
- * - Blob URL を解放し、メモリをリークさせないようにする
- */
-const onOldContentLeave = () => {
-    if (oldImageToFree) {
-        URL.revokeObjectURL(oldImageToFree);
-        oldImageToFree = null;
-        console.log('Freed old Blob URL on leave.');
-    }
-};
-
-/** サーバーからランダムに画像 or テキストを取得し、oldContent と newContent を更新する。 */
+/** サーバーからデータを取得して newContent を更新 */
 async function fetchData(url: string) {
     try {
         const response = await fetch(url);
-        const json = await response.json() as ServerResponse;
+        const data = await response.json();
 
-        const isImage = json.media_type === "image";
+        const isImage = data.media_type === 'image';
         const value = isImage
-            ? `data:${json.mime_type};base64,${json.data}`
-            : await marked(json.description);
+            ? `data:${data.mime_type};base64,${data.data}`
+            : marked(data.description ?? '');
 
-        // まず、今までの newContent を oldContent に退避する
-        // → これで古いコンテンツが「フェードアウト用コンポーネント」として表示される
+        // すでに newContent があれば oldContent に退避(クロスフェード用)
         if (newContent.value.value) {
             oldContent.value = { ...newContent.value };
         }
-
-        // つづいて新しいコンテンツをセット
+        // 新しいコンテンツをセット
         newContent.value = {
             value,
             isImage,
-            key: Date.now(), // key を更新して再描画をトリガー
+            key: Date.now(),
         };
 
-        // 画像でなければ onLoad イベントが存在しないので、即座に古いコンテンツをフェードアウト開始
-        // (テキストはすでに取得済みなので、表示可能)
+        // 画像以外なら @load イベントが無いので即フェードアウト開始
         if (!isImage) {
             startFadeOutOldContent();
         }
 
     } catch (error) {
-        console.error('Fetch error:', error);
+        console.error('Fetch error in Tile:', error);
     }
-};
+}
 
-/**
- * 古いコンテンツをフェードアウト開始する。
- * - oldContent の実体があるなら、その画像URLを `oldImageToFree` に退避
- * - oldContent.value = null にすることで `<transition>` の leave を発火
- */
+/** 画像読み込み完了時: Masonryへ再レイアウトを通知 + クロスフェード開始 */
+function onImageLoad(e: Event) {
+    emit('imageLoaded');
+    startFadeOutOldContent();
+}
+
+/** 古いコンテンツをクロスフェード終了後に破棄 */
+function onOldContentLeave() {
+    if (oldImageToFree) {
+        URL.revokeObjectURL(oldImageToFree);
+        oldImageToFree = null;
+    }
+}
+
+/** 古いコンテンツのフェードアウトを開始する */
 function startFadeOutOldContent() {
     if (oldContent.value) {
         if (oldContent.value.isImage) {
-            // 画像なら後で解放するため URL を保存
             oldImageToFree = oldContent.value.value;
         }
-        // leave トランジション発火 → @after-leave="onOldContentLeave"
-        oldContent.value = null;
+        oldContent.value = null; // -> <transition> leave開始
     }
 }
 </script>
 
 <template>
-    <div ref="tileContainer" class="crossfade-container">
-        <!-- 古いコンテンツ（フェードアウト用） -->
-        <transition name="crossfade" @after-leave="onOldContentLeave">
-            <div v-if="oldContent" class="content" :key="'old-' + oldContent.key">
-                <!-- 画像 / テキスト 切り替え表示 -->
-                <img v-if="oldContent.isImage" :src="oldContent.value" alt="previous image" class="content-image" />
-                <div v-else v-html="oldContent.value" class="content-text"></div>
-                <!-- <p v-else>{{ oldContent.value }}</p> -->
-            </div>
-        </transition>
-
-        <!-- 新しいコンテンツ（フェードイン用） -->
+    <div class="tile-container">
+        <!-- 新コンテンツ(通常フロー) -->
         <transition name="crossfade">
             <div class="content" :key="'new-' + newContent.key">
                 <img v-if="newContent.isImage" :src="newContent.value" alt="new image" class="content-image"
                     @load="onImageLoad" />
-                <div v-else v-html="newContent.value" class="content-text"></div>
-                <!-- <p v-else>{{ newContent.value }}</p> -->
+                <div v-else class="content-text" v-html="newContent.value"></div>
+            </div>
+        </transition>
+
+        <!-- 古いコンテンツ(absoluteで重ねる) -->
+        <transition name="crossfade" @after-leave="onOldContentLeave">
+            <div v-if="oldContent" class="content old-content" :key="'old-' + oldContent.key">
+                <img v-if="oldContent.isImage" :src="oldContent.value" alt="old image" class="content-image" />
+                <div v-else class="content-text" v-html="oldContent.value"></div>
             </div>
         </transition>
     </div>
 </template>
 
 <style scoped>
-.crossfade-container {
+.tile-container {
     position: relative;
     width: 100%;
-    height: auto;
-    overflow: hidden;
+    /* 新コンテンツが高さを確保し、Masonryに正しく伝わる */
 }
 
 .content {
+    position: relative;
+    width: 100%;
+    /* 画像の場合: 幅100% & height:auto で可変 */
+}
+
+.old-content {
+    /* 古いコンテンツだけabsoluteで重ねる */
     position: absolute;
     top: 0;
     left: 0;
-    width: 100%;
-    height: 100%;
 }
 
-/* 画像の場合はアスペクト比を維持しつつ見切れないようにする */
+/* 画像を幅100%で表示 */
 .content-image {
     width: 100%;
     height: auto;
     object-fit: contain;
-    display: block;
 }
 
+/* テキストなど */
 .content-text {
-    font-size: xx-large;
+    font-size: 1.5rem;
 }
 
-/* クロスフェードアニメーション */
-.crossfade-enter-active {
-    /* フェードイン: 2秒 */
-    transition: opacity 2s;
-}
-
+/* クロスフェード(フェードイン・アウト) */
+.crossfade-enter-active,
 .crossfade-leave-active {
-    /* フェードアウト: 1秒 */
     transition: opacity 1s;
 }
 

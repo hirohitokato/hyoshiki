@@ -1,60 +1,88 @@
 <script setup lang="ts">
-import { ref } from 'vue';
-import { onMounted, onBeforeUnmount } from "vue";
-import MasonryWall from '@yeger/vue-masonry-wall';
+import { ref, onMounted, onBeforeUnmount } from "vue";
+import masonry from "vue-next-masonry";
 import Tile from "./Tile.vue";
-
 
 const props = defineProps({
     columns: { type: Number, default: 5 },
     num_tiles: { type: Number, default: 8 },
 });
 
-const interval = 5 * 1000;
-let fetchTimer: number | undefined;
+// 画像一覧(タイル数ぶん)
+const imageList = ref<{ id: number; url: string }[]>([])
 
-// タイルごとの画像リスト
-const imageList = ref<{ id: number; url: string }[]>([]);
+// 一定間隔で画像リストを再取得するタイマー
+let fetchTimer: number | undefined
+const interval = 5000
 
 onMounted(() => {
-    fetchImageList();
-    fetchTimer = setInterval(fetchImageList, interval);
-});
+    fetchImageList()
+    fetchTimer = setInterval(fetchImageList, interval)
+})
 
 onBeforeUnmount(() => {
     if (fetchTimer) {
-        clearInterval(fetchTimer);
+        clearInterval(fetchTimer)
     }
-});
+})
 
 async function fetchImageList() {
     try {
-        const url = "http://localhost:8000/api/images/";
-        const response = await fetch(url);
-        const data = await response.json();
+        // サンプル用: ダミーAPIのURL
+        const url = "http://localhost:8000/api/images/"
+        const response = await fetch(url)
+        const data = await response.json()
 
-        const urls = data.map((item) => { return { id: item.id, url: `${url}${item.id}?t=${Date.now()}` } });
-        // 配列をシャッフルする関数(一時的なもの)
-        urls.sort(() => Math.random() - 0.5);
+        // 取得したリストから URL を組み立て
+        const urls = data.map((item: any) => {
+            return {
+                id: item.id,
+                url: `${url}${item.id}?t=${Date.now()}`, // キャッシュバスト
+            }
+        })
 
-        let newImagelist: { id: number; url: string }[] = [];
+        // ランダムにシャッフル
+        urls.sort(() => Math.random() - 0.5)
+
+        // num_tilesぶん作成
+        const newImagelist: { id: number; url: string }[] = []
         for (let i = 0; i < props.num_tiles; i++) {
             newImagelist.push({
                 id: i,
-                url: urls[i % urls.length].url
-            });
+                url: urls[i % urls.length].url,
+            })
         }
-        imageList.value = newImagelist;
+        imageList.value = newImagelist
+
     } catch (error) {
-        console.error('Failed to fetch image list:', error);
+        console.error("Failed to fetch image list:", error)
     }
-};
+}
+
+// 子(Tile)コンポーネントから画像読み込み通知を受け取り → レイアウト更新
+function onImageLoaded() {
+    if (masonry.value) {
+        masonry.value.layout() // Masonry の再配置を実行
+    }
+}
+
+// layoutCompleteイベントが必要なら定義（任意）
+function onLayoutComplete() {
+    // console.log("Masonry layout done.")
+}
 </script>
 
 <template>
-    <MasonryWall :items="imageList" :ssr-columns="1" :column-width="200" :gap="16">
+    <!-- cols/gutterなどを指定。itemsも渡しているが、slotスコープから item を取り出す形で使用 -->
+    <masonry ref="masonry" :items="imageList" :cols="columns" :gutter="16" @layoutComplete="onLayoutComplete">
+        <!-- slotスコープの { item } を使い、Tile を配置 -->
         <template #default="{ item }">
-            <Tile :child_id="item.id" :resource_url="item.url" class="tile-item" />
+            <!-- Tile.vue -->
+            <Tile :child_id="item.id" :resource_url="item.url" @imageLoaded="onImageLoaded" />
         </template>
-    </MasonryWall>
+    </masonry>
 </template>
+
+<style scoped>
+/* 必要に応じて調整 */
+</style>
