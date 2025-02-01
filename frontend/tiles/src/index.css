@@ -66,3 +66,17 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 }
+
+/* react-masonry-css 用のスタイル */
+.my-masonry-grid {
+  display: flex;
+  margin-left: -10px; /* ギャップ分のオフセット */
+  width: auto;
+}
+.my-masonry-grid_column {
+  padding-left: 10px; /* ギャップのサイズ */
+  background-clip: padding-box;
+}
+.my-masonry-grid_column > * {
+  margin-bottom: 10px;
+}

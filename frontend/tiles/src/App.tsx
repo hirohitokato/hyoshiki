@@ -1,45 +1,69 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import Tiles from "./components/Tiles";
+// src/App.tsx
+import React, { useState, useEffect } from 'react';
+import Tiles from './components/Tiles';
+import { useFetchImageList } from './hooks/useFetchImageList';
+import { ImageListContext } from './context/ImageListContext';
 
-import './App.css'
-
-import { useQueryParam } from './hooks/useQueryParam.ts';
-
-function App() {
-  const [count, setCount] = useState(0)
-  // URLパラメータから取得
-  const numTiles = useQueryParam<number>("num_tiles", 15);
-  const columns = useQueryParam<number>("num_columns", 4);
-
-  return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-      <div style={{ width: "100vw", height: 400, border: "1px solid black" }}>
-        <Tiles num_tiles={numTiles} columns={columns} />
-      </div>
-          </>
-  )
+interface AppProps {
+  tileCount: number;
+  columns: number;
 }
 
-export default App
+const API_URL = "http://localhost:8000/api/images/"; // API のエンドポイント
+
+const App: React.FC<AppProps> = ({ tileCount, columns }) => {
+  // サーバーからは十分な件数（例：50件）の画像一覧を取得する
+  const { imageList: fetchedList, error } = useFetchImageList(API_URL, 50);
+  // タイル用画像配列（固定長＝tileCount）を管理する状態
+  const [tileImages, setTileImages] = useState<string[]>([]);
+
+  // 初回：fetchedList が取得できたら、tileCount 件だけランダムに選んで初期化する
+  useEffect(() => {
+    if (fetchedList.length > 0 && tileImages.length === 0) {
+      const newTileImages: string[] = [];
+      for (let i = 0; i < tileCount; i++) {
+        const randomItem = fetchedList[Math.floor(Math.random() * fetchedList.length)];
+        // キャッシュバストのため、現在時刻をクエリパラメータとして付与
+        const baseUrl = randomItem.url.split('?')[0];
+        newTileImages.push(`${baseUrl}?t=${Date.now()}`);
+      }
+      setTileImages(newTileImages);
+    }
+  }, [fetchedList, tileCount, tileImages.length]);
+
+  // 3～6秒ごとに、tileImages の中の１要素だけをランダムに更新する
+  useEffect(() => {
+    // tileImages の初期化前や fetchedList 未取得の場合は何もしない
+    if (tileImages.length !== tileCount || fetchedList.length === 0) return;
+
+    const updateRandomTile = () => {
+      const randomIndex = Math.floor(Math.random() * tileCount);
+      const randomItem = fetchedList[Math.floor(Math.random() * fetchedList.length)];
+      const baseUrl = randomItem.url.split('?')[0];
+      setTileImages(prev => {
+        const newTileImages = [...prev];
+        newTileImages[randomIndex] = `${baseUrl}?t=${Date.now()}`;
+        return newTileImages;
+      });
+    };
+
+    // 次の更新までの遅延を 3000～6000 ミリ秒の間でランダムに決定
+    const delay = 1000 + Math.random() * 3000;
+    const timer = setTimeout(() => {
+      updateRandomTile();
+    }, delay);
+
+    return () => clearTimeout(timer);
+  }, [tileImages, tileCount, fetchedList]);
+
+  if (error) return <div>Error: {error}</div>;
+  if (tileImages.length !== tileCount) return <div>Loading...</div>;
+
+  return (
+    <ImageListContext.Provider value={tileImages}>
+      <Tiles tileCount={tileCount} columns={columns} />
+    </ImageListContext.Provider>
+  );
+};
+
+export default App;

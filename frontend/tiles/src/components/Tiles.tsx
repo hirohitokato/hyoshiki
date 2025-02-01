@@ -1,26 +1,21 @@
-import React from "react";
-import Masonry from "react-masonry-css";
-import Tile from "./Tile";
-import { useFetchImageList } from "../hooks/useFetchImageList";
+// src/components/Tiles.tsx
+import React from 'react';
+import Masonry from 'react-masonry-css';
+import Tile from './Tile';
 
 interface TilesProps {
+    tileCount: number;
     columns: number;
-    num_tiles: number;
 }
 
-const Tiles: React.FC<TilesProps> = ({ columns, num_tiles }) => {
-    const { imageList, error } = useFetchImageList(
-        "http://localhost:8000/api/images/",
-        num_tiles,
-        5000
-    );
-    if (error) return <div>Error: {error}</div>;
-
-    // ブレークポイントを利用する場合は、必要に応じてここで設定可能です。
+const Tiles: React.FC<TilesProps> = ({ tileCount, columns }) => {
     const breakpointColumnsObj = {
         default: columns
-        // 例: 1200: columns, 768: 2, 500: 1 など、画面幅に応じた設定も可能です。
+        // 必要に応じてレスポンシブ用ブレークポイントも追加可能
     };
+
+    // 0～tileCount-1 の連番を作成し、各 Tile に ID として渡す
+    const indices = Array.from({ length: tileCount }, (_, i) => i);
 
     return (
         <Masonry
@@ -28,11 +23,11 @@ const Tiles: React.FC<TilesProps> = ({ columns, num_tiles }) => {
             className="my-masonry-grid"
             columnClassName="my-masonry-grid_column"
         >
-            {imageList.map((item) => (
-                <Tile key={item.id} resource_url={item.url} />
+            {indices.map(i => (
+                <Tile key={i} id={i} />
             ))}
         </Masonry>
     );
 };
 
-export default Tiles;
+export default React.memo(Tiles);

@@ -1,51 +1,51 @@
-import React, { useState, useEffect } from "react";
-import TinyCrossfade from "react-tiny-crossfade";
-import { useFetchContent } from "../hooks/useFetchContent";
+// src/components/Tile.tsx
+import React, { useContext, useState, useEffect } from 'react';
+import TinyCrossfade from 'react-tiny-crossfade';
+import { ImageListContext } from '../context/ImageListContext';
+import { useFetchContent } from '../hooks/useFetchContent';
+import { useQueryParam } from '../hooks/useQueryParam';
 
 interface TileProps {
-  resource_url: string;
-  onImageLoaded?: () => void;
+  id: number;
 }
 
-const Tile: React.FC<TileProps> = ({ resource_url, onImageLoaded }) => {
-  const { data, error } = useFetchContent(resource_url);
-  const [currentSrc, setCurrentSrc] = useState<string | null>(null);
+const Tile: React.FC<TileProps> = ({ id }) => {
+  // Context により、各 Tile に対応する API URL（JSON を返すエンドポイント）を取得
+  const imageList = useContext(ImageListContext);
+  // 初期状態は Context 内の該当 URL を currentUrl に保持する
+  const [currentUrl, setCurrentUrl] = useState<string>(imageList[id]);
 
+  // Context の該当 URL が変化した場合のみ currentUrl を更新
   useEffect(() => {
-    if (data?.isImage && data.value) {
-      // 新しい画像URLの場合のみ状態を更新してクロスフェードを発生させる
-      if (data.value !== currentSrc) {
-        setCurrentSrc(data.value);
-        onImageLoaded?.();
-      }
+    if (imageList[id] !== currentUrl) {
+      setCurrentUrl(imageList[id]);
     }
-  }, [data, onImageLoaded, currentSrc]);
+  }, [imageList, id, currentUrl]);
 
-  if (error) {
-    return <div>Error: {error}</div>;
-  }
+  // currentUrl に対して JSON を fetch し、BASE64 の画像データから Data URL を生成
+  const { data, error } = useFetchContent(currentUrl);
+
+  // index.html のクエリパラメータ transition_duration を取得（単位は ms）
+  const transitionDuration = useQueryParam<number>('transition_duration', 500);
+
+  if (error) return <div>Error: {error}</div>;
+  if (!data) return <div>Loading...</div>;
 
   return (
-    <TinyCrossfade className="tile" duration={1}>
-      {currentSrc ? (
+    // ここでラッパー div に CSS transition を指定することで、
+    // 画像の切り替えに伴うサイズや位置の変化がスムーズにアニメーションします
+    <div style={{ transition: `all ${transitionDuration}ms ease` }}>
+      <TinyCrossfade duration={1}>
         <img
-          key={currentSrc}
-          src={currentSrc}
-          alt="content"
-          style={{ width: "100%", height: "auto" }}
+          key={currentUrl}
+          src={data.value}
+          alt={`tile-${id}`}
+          style={{ width: '100%', height: 'auto' }}
         />
-      ) : (
-        <div
-          key="placeholder"
-          style={{
-            backgroundColor: "#eee",
-            width: "100%",
-            height: "100%"
-          }}
-        />
-      )}
-    </TinyCrossfade>
+      </TinyCrossfade>
+    </div>
   );
 };
 
 export default Tile;
+// export default React.memo(Tile);
