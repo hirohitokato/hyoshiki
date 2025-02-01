@@ -21,7 +21,7 @@ const Tiles: React.FC<TilesProps> = ({ columns, num_tiles }) => {
     return (
         <Masonry minColumnWidth={200} gap={10} transition="0.5s">
             {imageList.map((item) => (
-                <div key={item.id} style={{ width: "100px" }}>
+                <div key={item.id} style={{  }}>
                     <Tile key={item.id}
                         resource_url={item.url} />
                 </div>

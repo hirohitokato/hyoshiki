@@ -10,7 +10,7 @@ import { useQueryParam } from './hooks/useQueryParam.ts';
 function App() {
   const [count, setCount] = useState(0)
   // URLパラメータから取得
-  const numTiles = useQueryParam<number>("num_tiles", 10);
+  const numTiles = useQueryParam<number>("num_tiles", 15);
   const columns = useQueryParam<number>("num_columns", 4);
 
   return (

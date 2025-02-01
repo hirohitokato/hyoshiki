@@ -19,12 +19,13 @@ const Tile: React.FC<TileProps> = ({ resource_url, onImageLoaded }) => {
   if (error) return <div>Error: {error}</div>;
   if (!data) return <div>Loading...</div>;
 
+  console.log("rendered Tile");
   return (
     <TinyCrossfade className="tile" duration={1}>
       <img src={data.value}
         alt="content"
         key={resource_url}
-        style={{ width: "100px" }} />
+        style={{  }} />
     </TinyCrossfade>
   );
 };

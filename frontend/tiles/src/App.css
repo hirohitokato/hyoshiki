@@ -40,3 +40,9 @@
 .read-the-docs {
   color: #888;
 }
+
+/* Masonryでの画像を横幅に合わせたい場合 */
+.tile img {
+  width: 100%;
+  height: auto;
+}
