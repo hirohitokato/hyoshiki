@@ -1,4 +1,5 @@
-import Masonry from "@mtsmfm/react-masonry"; // https://github.com/mtsmfm/react-masonry
+import React from "react";
+import Masonry from "react-masonry-css";
 import Tile from "./Tile";
 import { useFetchImageList } from "../hooks/useFetchImageList";
 
@@ -15,16 +16,20 @@ const Tiles: React.FC<TilesProps> = ({ columns, num_tiles }) => {
     );
     if (error) return <div>Error: {error}</div>;
 
-    // これだとクロスフェードしてくれない。
-    // たぶん再レンダリングが発生するせいでTileがそのたびに再生成されていて、クロスフェードにならない
-    // タイルの中でリロードするのであればいいけれど、URLを管理するのはタイルの外側のコンポーネントの責務にしたい
+    // ブレークポイントを利用する場合は、必要に応じてここで設定可能です。
+    const breakpointColumnsObj = {
+        default: columns
+        // 例: 1200: columns, 768: 2, 500: 1 など、画面幅に応じた設定も可能です。
+    };
+
     return (
-        <Masonry minColumnWidth={200} gap={10} transition="0.5s">
+        <Masonry
+            breakpointCols={breakpointColumnsObj}
+            className="my-masonry-grid"
+            columnClassName="my-masonry-grid_column"
+        >
             {imageList.map((item) => (
-                <div key={item.id} style={{  }}>
-                    <Tile key={item.id}
-                        resource_url={item.url} />
-                </div>
+                <Tile key={item.id} resource_url={item.url} />
             ))}
         </Masonry>
     );

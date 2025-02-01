@@ -46,3 +46,19 @@
   width: 100%;
   height: auto;
 }
+
+/* react-masonry-css 用のスタイル */
+.my-masonry-grid {
+  display: flex;
+  margin-left: -10px; /* ギャップ分のオフセット */
+  width: auto;
+}
+.my-masonry-grid_column {
+  padding-left: 10px; /* ギャップのサイズ */
+  background-clip: padding-box;
+}
+
+/* 各アイテム間の下部ギャップ */
+.my-masonry-grid_column > * {
+  margin-bottom: 10px;
+}
