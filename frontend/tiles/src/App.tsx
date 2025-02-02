@@ -48,7 +48,7 @@ const App: React.FC<AppProps> = ({ tileCount, columns }) => {
     };
 
     // 次の更新までの遅延を 3000～6000 ミリ秒の間でランダムに決定
-    const delay = 1000 + Math.random() * 3000;
+    const delay = 1000 + Math.random() * 300;
     const timer = setTimeout(() => {
       updateRandomTile();
     }, delay);

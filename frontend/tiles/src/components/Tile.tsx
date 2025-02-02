@@ -32,13 +32,10 @@ const Tile: React.FC<TileProps> = ({ id }) => {
 
   return (
     // motion.div でラップし、layout アニメーションを有効にする
-    <motion.div
-      layout
-      transition={{ duration: transitionDuration / 1000, ease: "easeInOut" }}
-      style={{ overflow: 'hidden' }}
-    >
+    <div className="tile" style={{ position: 'relative' }}>
       <AnimatePresence mode="wait">
         <motion.img
+          className='tile_image'
           key={currentUrl}
           src={data.value}
           alt={`tile-${id}`}
@@ -49,7 +46,7 @@ const Tile: React.FC<TileProps> = ({ id }) => {
           transition={{ duration: transitionDuration / 1000, ease: "easeInOut" }}
         />
       </AnimatePresence>
-    </motion.div>
+    </div>
   );
 };
 
