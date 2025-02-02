@@ -25,7 +25,7 @@ export function useFetchImageList(apiUrl: string, numItems: number) {
             // ランダムな順序にシャッフルしてから、必要な件数（numItems）を切り出す
             urls.sort(() => Math.random() - 0.5);
             setImageList(urls.slice(0, numItems));
-        } catch (err) {
+        } catch (_err) {
             setError("Failed to fetch image list");
         }
     }, [apiUrl, numItems]);
