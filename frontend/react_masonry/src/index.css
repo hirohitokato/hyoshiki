@@ -54,17 +54,6 @@ button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
 }
 
-.card {
-  padding: 2em;
-}
-
-#app {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
-}
-
 @media (prefers-color-scheme: light) {
   :root {
     color: #213547;
@@ -76,4 +65,32 @@ button:focus-visible {
   button {
     background-color: #f9f9f9;
   }
+}
+
+/* react-masonry-css 用のスタイル */
+.tiles {
+  display: flex;
+  margin-left: -10px; /*tiles_columnで10px左にズラしているのでオフセットして隙間を消しておく*/
+  width: auto;
+  transition: all 2s ease;
+}
+
+.tiles_column {
+  padding-left: 10px; /* ギャップのサイズ */
+  background-clip: padding-box;
+  /* transition: all 2s ease; */
+}
+
+.tile {
+  margin-bottom: 10px; /* タイル間の上下間ギャップ */
+  height: auto;
+  transition: all 2s ease;
+}
+
+.tile img {
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+  object-fit: cover;
+  /* transition: all 2s ease; */
 }
