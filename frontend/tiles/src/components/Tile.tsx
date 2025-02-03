@@ -39,7 +39,7 @@ const Tile: React.FC<TileProps> = ({ id }) => {
           key={currentUrl}
           src={data.value}
           alt={`tile-${id}`}
-          style={{ width: '100%', height: 'auto', display: 'block' }}
+          // style={{ width: '100%', height: 'auto', display: 'block' }}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}

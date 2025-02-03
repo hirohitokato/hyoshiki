@@ -1,6 +1,7 @@
 // src/components/Tiles.tsx
 import React from 'react';
-import Masonry from './masonry/Masonry';
+// import Masonry from 'react-masonry-css';
+import Masonry from 'react-smart-masonry';
 import Tile from './Tile';
 
 interface TilesProps {
@@ -19,9 +20,10 @@ const Tiles: React.FC<TilesProps> = ({ tileCount, columns }) => {
 
     return (
         <Masonry
-            breakpointCols={breakpointColumnsObj}
             className="tiles"
-            columnClassName="tiles_column"
+            columns={5} gap={10}           
+            // breakpointCols={breakpointColumnsObj}
+            // columnClassName="tiles_column"
         >
             {indices.map(i => (
                 <Tile key={i} id={i} />
