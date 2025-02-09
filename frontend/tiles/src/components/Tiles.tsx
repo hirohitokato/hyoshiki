@@ -102,7 +102,7 @@ const Tiles: React.FC<TilesProps> = ({ style, tileCount, columns, tileGap }) => 
                 sketch={sketch}
                 parentWidth={width || 100}
                 parentHeight={height || 100}
-                tileGap={tileGap} />
+                tileGap={tileGap || 20} />
         </div>
     )
 }
