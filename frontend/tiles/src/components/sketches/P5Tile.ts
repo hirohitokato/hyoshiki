@@ -1,27 +1,28 @@
 /**
  * p5.js + TypeScript による Masonry レイアウト風表示サンプル
  *
- * ・Tile クラス
+ * ・P5Tile クラス
  *   - 指定された画像 URL から画像を読み込み、画像サイズ取得後に親（Tiles）へ通知
  *   - Tiles から指示された位置へ、1 秒かけたアニメーション移動を実施
  *   - 画像読み込み前はプレースホルダーを描画
  *
- * ・Tiles クラス
- *   - 指定された列数に基づき、各 Tile を列単位に配置（各列の横幅は canvas 幅を列数で割った値）
+ * ・P5Tiles クラス
+ *   - 指定された列数に基づき、各 P5Tile を列単位に配置（各列の横幅は canvas 幅を列数で割った値）
  *   - 画像読み込み完了時に該当列のみ再レイアウトを行い、Tile 同士が重なったり隙間が生じないように調整
  */
 import "p5";
 import p5 from "p5";
+import { P5Tiles } from "./P5Tiles";
 
 /**
- * Tile クラス
+ * P5Tile クラス
  * － 画像の読み込み、サイズ計算、アニメーション移動、描画を担当します。
  */
-export class Tile {
+export class P5Tile {
     private _p5: p5;
 
     url: string;
-    parent: Tiles;
+    parent: P5Tiles;
     image: p5.Image | null;
     loaded: boolean;
     originalWidth: number;
@@ -38,7 +39,7 @@ export class Tile {
     duration: number = 1000; // 移動にかける時間（ミリ秒）
     column: number = 0; // 所属する列（Tiles から設定）
 
-    constructor(p5: p5, url: string, parent: Tiles) {
+    constructor(p5: p5, url: string, parent: P5Tiles) {
         this._p5 = p5;
         this.url = url;
         this.parent = parent;
@@ -133,7 +134,7 @@ export class Tile {
     }
 
     /**
-     * Tile を描画します。画像が読み込み済みの場合は画像を、
+     * P5Tile を描画します。画像が読み込み済みの場合は画像を、
      * 未読み込みの場合はプレースホルダーの矩形を描画します。
      */
     draw(): void {
@@ -141,7 +142,7 @@ export class Tile {
             this.scaledWidth = this.parent.columnWidth;
             this.scaledHeight = this.originalHeight *
                 (this.parent.columnWidth / this.originalWidth);
-
+console.log(this.x, this.y, this.scaledWidth, this.scaledHeight);
             this._p5.image(
                 this.image,
                 this.x,
@@ -154,129 +155,6 @@ export class Tile {
             this._p5.noStroke();
             this._p5.fill(220);
             this._p5.rect(this.x, this.y, this.parent.columnWidth, 100);
-        }
-    }
-}
-
-/**
- * Tiles クラス
- * － 複数の Tile を指定された列数に基づき、masonry レイアウト風に並べます。
- * － 各列の幅は canvas 幅を列数で割った値となり、各 Tile はアスペクト比を維持して表示されます。
- * － Tile から画像のサイズ情報を受け取った際は、該当列のレイアウトを再計算します。
- */
-export class Tiles {
-    columns: number;
-    canvasWidth: number;
-    canvasHeight: number;
-    columnsTiles: Tile[][];
-    tileCount: number = 0;
-    gap: number; // タイル間のギャップ（ピクセル）
-
-    get columnWidth(): number {
-        return (this.canvasWidth - this.gap * (this.columns - 1)) /
-            this.columns;
-    }
-
-    constructor(
-        columns: number,
-        canvasWidth: number,
-        canvasHeight: number,
-        tileGap: number,
-    ) {
-        this.columns = columns;
-        this.canvasWidth = canvasWidth;
-        this.canvasHeight = canvasHeight;
-        this.gap = tileGap;
-        this.columnsTiles = [];
-
-        for (let i = 0; i < this.columns; i++) {
-            this.columnsTiles[i] = [];
-        }
-    }
-
-    /**
-     * Tile を追加し、ラウンドロビン方式で列に割り当てた後、該当列のレイアウトを更新します。
-     * @param tile 追加する Tile
-     */
-    addTile(tile: Tile): void {
-        // ラウンドロビン方式により、tileCount % columns で所属列を決定
-        const colIndex = this.tileCount % this.columns;
-        tile.column = colIndex;
-        this.columnsTiles[colIndex].push(tile);
-        this.tileCount++;
-        // 追加した列のレイアウトを更新
-        this.layoutColumn(colIndex);
-    }
-
-    /**
-     * Tile の画像読み込み完了時に呼ばれ、該当列のレイアウト再計算を行います。
-     * @param tile 画像読み込み完了の Tile
-     */
-    notifyTileLoaded(tile: Tile): void {
-        const col = tile.column;
-        this.layoutColumn(col);
-    }
-
-    /**
-     * キャンバスのサイズを設定し、全 Tile の配置を再計算します。
-     */
-    setsize(width: number, height: number): void {
-        this.canvasWidth = width;
-        this.canvasHeight = height;
-        this.layout();
-    }
-
-    /**
-     * 全 Tile を再配置します。
-     */
-    layout(): void {
-        for (let i = 0; i < this.columns; i++) {
-            this.layoutColumn(i);
-        }
-    }
-
-    /**
-     * 指定された列において、上から順に Tile を配置します。
-     * 各 Tile の上端は前の Tile の下端に合わせ、隙間や重なりが生じないようにします。
-     * @param colIndex 対象の列インデックス
-     */
-    private layoutColumn(colIndex: number): void {
-        const colWidth = this.columnWidth;
-        const newX = colIndex * (colWidth + this.gap);
-        let y = 0;
-        const columnTiles = this.columnsTiles[colIndex];
-        for (let i = 0; i < columnTiles.length; i++) {
-            const tile = columnTiles[i];
-            tile.setTargetPosition(newX, y);
-            // 画像読み込み済みなら scaledHeight、未読み込みなら仮の高さ 100px を使用
-            const tileHeight = tile.loaded ? tile.scaledHeight : 100;
-            y += tileHeight;
-            // 最後のタイル以外は縦方向にもギャップを加える
-            if (i < columnTiles.length - 1) {
-                y += this.gap;
-            }
-        }
-    }
-
-    /**
-     * 各 Tile の更新処理を呼び出します。
-     */
-    update(): void {
-        for (const col of this.columnsTiles) {
-            for (const tile of col) {
-                tile.update();
-            }
-        }
-    }
-
-    /**
-     * 各 Tile の描画処理を呼び出します。
-     */
-    draw(): void {
-        for (const col of this.columnsTiles) {
-            for (const tile of col) {
-                tile.draw();
-            }
         }
     }
 }
