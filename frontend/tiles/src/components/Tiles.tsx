@@ -10,6 +10,7 @@ type TilesSketchProps = SketchProps & {
     parentHeight: number; // 親要素の高さ
     tileGap: number; // タイル間のギャップ（ピクセル）
     columns: number; // 列数
+    fadeDuration: number; // クロスフェードの継続時間（ミリ秒）
 };
 
 function createSketch(initialProps: TilesSketchProps): Sketch<TilesSketchProps> {
@@ -17,6 +18,7 @@ function createSketch(initialProps: TilesSketchProps): Sketch<TilesSketchProps> 
     return p5 => {
         const columns = initialProps.columns;
         let tileGap = initialProps.tileGap; // デフォルトのギャップ（ピクセル）
+        let fadeDuration = initialProps.fadeDuration; // クロスフェードの継続時間（ミリ秒）
         let backgroundColor = initialProps.backgroundColor; // RGBA。デフォルトは黒
 
         let tiles: P5Tiles;
@@ -25,9 +27,9 @@ function createSketch(initialProps: TilesSketchProps): Sketch<TilesSketchProps> 
             p5.createCanvas(screen.width, 600);
             // 背景色を白に設定
             p5.background(...backgroundColor);
-console.log(`columns=${columns}, parentHeight=${initialProps.parentHeight}`);
+            console.log(`columns=${columns}, parentHeight=${initialProps.parentHeight}`);
             // 指定した列数で masonry レイアウトを構築
-            tiles = new P5Tiles(columns, p5.width, p5.height, tileGap);
+            tiles = new P5Tiles(columns, p5.width, p5.height, tileGap, fadeDuration);
 
             // 例として複数の画像 URL を用いて P5Tile を追加
             // ※ここでは placeholder の画像 URL を利用しています
@@ -62,6 +64,10 @@ console.log(`columns=${columns}, parentHeight=${initialProps.parentHeight}`);
                 tiles.gap = tileGap;
                 tiles.layout();
             }
+            if (props.fadeDuration !== undefined) {
+                fadeDuration = props.fadeDuration;
+                tiles.fadeDuration = fadeDuration;
+            }
         };
 
         p5.draw = () => {
@@ -76,12 +82,14 @@ console.log(`columns=${columns}, parentHeight=${initialProps.parentHeight}`);
 
 interface TilesProps {
     style?: React.CSSProperties;
-    tileCount: number;
-    columns: number;
-    tileGap: number;
+    tileCount?: number;
+    columns?: number;
+    tileGap?: number;
+    fadeDuration?: number;
 }
 
-const Tiles: React.FC<TilesProps> = ({ style, tileCount, columns, tileGap }) => {
+const Tiles: React.FC<TilesProps> = (
+    { style, tileCount = 30, columns = 3, tileGap = 20, fadeDuration = 1000 }) => {
     const { width, height, ref } = useParentSize();
 
     const initialProps: TilesSketchProps = useMemo(() => {
@@ -90,9 +98,10 @@ const Tiles: React.FC<TilesProps> = ({ style, tileCount, columns, tileGap }) => 
             parentWidth: width || 100,
             parentHeight: height || 100,
             tileGap: tileGap,
-            columns: columns || 5,
+            columns: columns,
+            fadeDuration: fadeDuration, // クロスフェードの継続時間（ミリ秒）
         }
-    }, [width, height, tileGap, columns]);
+    }, [width, height, tileGap, columns, fadeDuration]);
 
     const sketch = useMemo(() => createSketch(initialProps), [initialProps]);
 
@@ -102,7 +111,8 @@ const Tiles: React.FC<TilesProps> = ({ style, tileCount, columns, tileGap }) => 
                 sketch={sketch}
                 parentWidth={width || 100}
                 parentHeight={height || 100}
-                tileGap={tileGap || 20} />
+                tileGap={tileGap}
+                fadeDuration={fadeDuration} />
         </div>
     )
 }

@@ -1,160 +1,163 @@
-/**
- * p5.js + TypeScript による Masonry レイアウト風表示サンプル
- *
- * ・P5Tile クラス
- *   - 指定された画像 URL から画像を読み込み、画像サイズ取得後に親（Tiles）へ通知
- *   - Tiles から指示された位置へ、1 秒かけたアニメーション移動を実施
- *   - 画像読み込み前はプレースホルダーを描画
- *
- * ・P5Tiles クラス
- *   - 指定された列数に基づき、各 P5Tile を列単位に配置（各列の横幅は canvas 幅を列数で割った値）
- *   - 画像読み込み完了時に該当列のみ再レイアウトを行い、Tile 同士が重なったり隙間が生じないように調整
- */
-import "p5";
 import p5 from "p5";
 import { P5Tiles } from "./P5Tiles";
 
-/**
- * P5Tile クラス
- * － 画像の読み込み、サイズ計算、アニメーション移動、描画を担当します。
- */
 export class P5Tile {
-    private _p5: p5;
+  private _p5: p5;
+  url: string;
+  parent: P5Tiles;
 
-    url: string;
-    parent: P5Tiles;
-    image: p5.Image | null;
-    loaded: boolean;
-    originalWidth: number;
-    originalHeight: number;
-    scaledWidth: number;
-    scaledHeight: number;
-    x: number;
-    y: number;
-    targetX: number;
-    targetY: number;
-    startX: number;
-    startY: number;
+  // 現在表示中の画像と次に表示する画像（クロスフェード用）
+  image: p5.Image | null = null;
+  nextImage: p5.Image | null = null;
+
+  loaded: boolean = false;
+  originalWidth: number = 0;
+  originalHeight: number = 0;
+  scaledWidth: number = 0;
+  scaledHeight: number = 0;
+
+  // 位置および移動関連
+  x: number = 0;
+  y: number = 0;
+  targetX: number = 0;
+  targetY: number = 0;
+  startX: number = 0;
+  startY: number = 0;
+  startTime: number = 0;
+  duration: number = 1000; // 移動アニメーション時間（ms）
+  column: number = 0;      // 所属する列
+
+  // クロスフェード関連の管理（新旧画像のサイズ・開始時刻を1つのオブジェクトにまとめる）
+  crossfadeData: {
     startTime: number;
-    duration: number = 1000; // 移動にかける時間（ミリ秒）
-    column: number = 0; // 所属する列（Tiles から設定）
+    oldWidth: number;
+    oldHeight: number;
+    newWidth: number;
+    newHeight: number;
+  } | null = null;
+  crossfadeInProgress: boolean = false;
+  notifiedHalf: boolean = false;
 
-    constructor(p5: p5, url: string, parent: P5Tiles) {
-        this._p5 = p5;
-        this.url = url;
-        this.parent = parent;
-        this.image = null;
-        this.loaded = false;
-        this.originalWidth = 0;
-        this.originalHeight = 0;
-        this.scaledWidth = 0;
-        this.scaledHeight = 0;
-        this.x = 0;
-        this.y = 0;
-        this.targetX = 0;
-        this.targetY = 0;
-        this.startX = 0;
-        this.startY = 0;
-        this.startTime = 0;
+  constructor(p5: p5, url: string, parent: P5Tiles) {
+    this._p5 = p5;
+    this.url = url;
+    this.parent = parent;
+    this.fetchImage(url);
+    // 定期的に画像更新（画像URLが変わる場合）
+    setInterval(() => this.fetchImage(url), 3000 + p5.random(100, 1000));
+  }
 
-        this.fetchImage(url);
-        setInterval(() => {
-            this.fetchImage(url);
-        }, 3000 + p5.random(100, 1000));
+  async fetchImage(url: string) {
+    const response = await fetch(url);
+    const json = await response.json();
+    const data = `data:${json.mime_type};base64,${json.data}`;
+    this._p5.loadImage(data, (img: p5.Image) => this.onImageLoaded(img));
+  }
+
+  onImageLoaded(img: p5.Image): void {
+    if (!this.loaded || !this.image) {
+      // 初回読み込み時
+      this.image = img;
+      this.loaded = true;
+      this.originalWidth = img.width;
+      this.originalHeight = img.height;
+      this.scaledWidth = this.parent.columnWidth;
+      this.scaledHeight = this.originalHeight * (this.parent.columnWidth / this.originalWidth);
+      this.parent.notifyTileLoaded(this);
+    } else {
+      // 既に画像が表示されている場合はクロスフェード開始
+      this.nextImage = img;
+      const newWidth = this.parent.columnWidth;
+      const newHeight = img.height * (this.parent.columnWidth / img.width);
+      this.crossfadeData = {
+        startTime: this._p5.millis(),
+        oldWidth: this.scaledWidth,
+        oldHeight: this.scaledHeight,
+        newWidth,
+        newHeight,
+      };
+      this.crossfadeInProgress = true;
+      this.notifiedHalf = false;
     }
+  }
 
-    async fetchImage(url: string) {
-        const response = await fetch(url);
-        const json = await response.json();
-        const data = `data:${json.mime_type};base64,${json.data}`;
-        this._p5.loadImage(data, (img: p5.Image) => {
-            this.onImageLoaded(img);
-        });
+  setTargetPosition(newX: number, newY: number): void {
+    if (this.startTime === 0) {
+      this.x = newX;
+      this.y = newY;
+      this.targetX = newX;
+      this.targetY = newY;
+      this.startX = newX;
+      this.startY = newY;
+      this.startTime = this._p5.millis();
+    } else if (this.targetX !== newX || this.targetY !== newY) {
+      this.startX = this.x;
+      this.startY = this.y;
+      this.targetX = newX;
+      this.targetY = newY;
+      this.startTime = this._p5.millis();
     }
+  }
 
-    /**
-     * 画像の読み込み完了時に呼ばれるコールバック
-     * 読み込んだ画像のサイズ情報を元に、表示用サイズを計算し親に通知します。
-     * @param img 読み込まれた p5.Image
-     */
-    onImageLoaded(img: p5.Image): void {
-        this.image = img;
-        this.loaded = true;
-        this.originalWidth = img.width;
-        this.originalHeight = img.height;
-        // 親の指定する列幅に合わせ、アスペクト比を維持したサイズを計算
-        this.scaledWidth = this.parent.columnWidth;
-        this.scaledHeight = this.originalHeight *
-            (this.parent.columnWidth / this.originalWidth);
-        // 画像読み込み完了を親に通知（該当列のみ再レイアウト）
+  update(): void {
+    const elapsed = this._p5.millis() - this.startTime;
+    if (elapsed < this.duration) {
+      const t = elapsed / this.duration;
+      this.x = this._p5.lerp(this.startX, this.targetX, t);
+      this.y = this._p5.lerp(this.startY, this.targetY, t);
+    } else {
+      this.x = this.targetX;
+      this.y = this.targetY;
+    }
+  }
+
+  draw(): void {
+    if (this.crossfadeInProgress && this.nextImage && this.crossfadeData) {
+      const elapsed = this._p5.millis() - this.crossfadeData.startTime;
+      const progress = this._p5.constrain(elapsed / this.parent.fadeDuration, 0, 1);
+
+      // 50%進行時に親へサイズ変更の通知（1度だけ）
+      if (progress >= 0.5 && !this.notifiedHalf) {
+        this.scaledWidth = this.crossfadeData.newWidth;
+        this.scaledHeight = this.crossfadeData.newHeight;
         this.parent.notifyTileLoaded(this);
-    }
+        this.notifiedHalf = true;
+      }
 
-    /**
-     * 目標位置を設定し、現在位置からの移動を 1 秒かけたアニメーションで行います。
-     * @param newX 目標の x 座標
-     * @param newY 目標の y 座標
-     */
-    setTargetPosition(newX: number, newY: number): void {
-        // 初回配置時は即時反映
-        if (this.startTime === 0) {
-            this.x = newX;
-            this.y = newY;
-            this.targetX = newX;
-            this.targetY = newY;
-            this.startX = newX;
-            this.startY = newY;
-            this.startTime = this._p5.millis();
-        } else {
-            // 目標位置が変更された場合、現在位置から新たな目標位置へ移動開始
-            if (this.targetX !== newX || this.targetY !== newY) {
-                this.startX = this.x;
-                this.startY = this.y;
-                this.targetX = newX;
-                this.targetY = newY;
-                this.startTime = this._p5.millis();
-            }
-        }
-    }
+      // 古い画像は、クロスフェード開始前のサイズを維持して描画
+      this._p5.push();
+      this._p5.tint(255, (1 - progress) * 255);
+      if (this.image) {
+        this._p5.image(this.image, this.x, this.y, this.crossfadeData.oldWidth, this.crossfadeData.oldHeight);
+      }
+      this._p5.pop();
 
-    /**
-     * 毎フレーム呼ばれ、位置のアニメーション更新を行います。
-     */
-    update(): void {
-        const elapsed = this._p5.millis() - this.startTime;
-        if (elapsed < this.duration) {
-            const t = elapsed / this.duration;
-            // 線形補間により位置を更新
-            this.x = this._p5.lerp(this.startX, this.targetX, t);
-            this.y = this._p5.lerp(this.startY, this.targetY, t);
-        } else {
-            this.x = this.targetX;
-            this.y = this.targetY;
-        }
-    }
+      // 新しい画像は新たに計算したサイズで描画
+      this._p5.push();
+      this._p5.tint(255, progress * 255);
+      this._p5.image(this.nextImage, this.x, this.y, this.crossfadeData.newWidth, this.crossfadeData.newHeight);
+      this._p5.pop();
 
-    /**
-     * P5Tile を描画します。画像が読み込み済みの場合は画像を、
-     * 未読み込みの場合はプレースホルダーの矩形を描画します。
-     */
-    draw(): void {
-        if (this.loaded && this.image) {
-            this.scaledWidth = this.parent.columnWidth;
-            this.scaledHeight = this.originalHeight *
-                (this.parent.columnWidth / this.originalWidth);
-console.log(this.x, this.y, this.scaledWidth, this.scaledHeight);
-            this._p5.image(
-                this.image,
-                this.x,
-                this.y,
-                this.scaledWidth,
-                this.scaledHeight,
-            );
-        } else {
-            // 読み込み中は薄いグレーの矩形を描画
-            this._p5.noStroke();
-            this._p5.fill(220);
-            this._p5.rect(this.x, this.y, this.parent.columnWidth, 100);
-        }
+      if (progress >= 1) {
+        // クロスフェード完了後、新画像とサイズ情報に切り替え
+        this.image = this.nextImage;
+        this.originalWidth = this.image.width;
+        this.originalHeight = this.image.height;
+        this.nextImage = null;
+        this.crossfadeData = null;
+        this.crossfadeInProgress = false;
+      }
+    } else {
+      // 通常描画
+      if (this.loaded && this.image) {
+        this.scaledWidth = this.parent.columnWidth;
+        this.scaledHeight = this.originalHeight * (this.parent.columnWidth / this.originalWidth);
+        this._p5.image(this.image, this.x, this.y, this.scaledWidth, this.scaledHeight);
+      } else {
+        this._p5.noStroke();
+        this._p5.fill(220);
+        this._p5.rect(this.x, this.y, this.parent.columnWidth, 100);
+      }
     }
+  }
 }
