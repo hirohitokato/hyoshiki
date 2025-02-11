@@ -1,9 +1,8 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useRef, useState } from "react";
 
+// マウントされたコンポーネントの、親要素のサイズを取得するカスタムフック
 export function useParentSize() {
-    const [height, setHeight] = useState<number | null>(null);
-    const [width, setWidth] = useState<number | null>(null);
+    const sizeRef = useRef({ width: 0, height: 0 });
     const divRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -13,8 +12,7 @@ export function useParentSize() {
         // サイズを更新する関数
         const updateSize = () => {
             const rect = node.getBoundingClientRect();
-            setHeight(rect.height);
-            setWidth(rect.width);
+            sizeRef.current = { width: rect.width, height: rect.height };
         };
 
         // 初回計測
@@ -33,5 +31,5 @@ export function useParentSize() {
         };
     }, []); // 必要に応じて依存関係を追加
 
-    return { width, height, ref: divRef };
+    return { sizeRef, ref: divRef };
 }

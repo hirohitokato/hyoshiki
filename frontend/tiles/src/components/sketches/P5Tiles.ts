@@ -12,7 +12,6 @@ export class P5Tiles {
     canvasHeight: number;
     columnsTiles: P5Tile[][];
     tileCount: number = 0;
-    fadeDuration: number = 1000; // クロスフェードの継続時間（ミリ秒）
     gap: number; // タイル間のギャップ（ピクセル）
 
     get columnWidth(): number {
@@ -25,13 +24,11 @@ export class P5Tiles {
         canvasWidth: number,
         canvasHeight: number,
         tileGap: number,
-        fadeDuration: number
     ) {
         this.columns = columns;
         this.canvasWidth = canvasWidth;
         this.canvasHeight = canvasHeight;
         this.gap = tileGap;
-        this.fadeDuration = fadeDuration;
         this.columnsTiles = [];
 
         for (let i = 0; i < this.columns; i++) {
