@@ -116,8 +116,8 @@ const Tiles = React.forwardRef<TilesRef, TilesProps>(
                 backgroundColor: [0, 0, 0, 255],
                 parentWidth,
                 parentHeight,
-                tileGap: tileGap,
-                columns: columns,
+                tileGap,
+                columns,
                 fadeDuration: fadeDuration, // クロスフェードの継続時間（ミリ秒）
             }
         }, [tileUrls, parentWidth, parentHeight, tileGap, columns, fadeDuration]);
