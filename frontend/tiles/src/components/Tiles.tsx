@@ -2,7 +2,7 @@ import { ReactP5Wrapper, Sketch, SketchProps } from "@p5-wrapper/react";
 import { P5Tiles } from "./sketches/P5Tiles";
 import { P5Tile } from './sketches/P5Tile';
 import { useParentSize } from "../hooks/useParentSize";
-import React, { RefObject, useEffect, useImperativeHandle, useMemo } from "react";
+import React, { useImperativeHandle, useMemo, useState } from "react";
 
 type TilesSketchProps = SketchProps & {
     tileUrls: string[];
@@ -12,15 +12,15 @@ type TilesSketchProps = SketchProps & {
     tileGap: number; // タイル間のギャップ（ピクセル）
     columns: number; // 列数
     fadeDuration: number; // クロスフェードの継続時間（ミリ秒）
+    updateFlag: number;
 };
 
-function createSketch(initialProps: TilesSketchProps): Sketch<TilesSketchProps> {
-
-    return p5 => {
-        const columns = initialProps.columns;
-        const tileGap = initialProps.tileGap; // デフォルトのギャップ（ピクセル）
-        const fadeDuration = initialProps.fadeDuration; // クロスフェードの継続時間（ミリ秒）
-        let backgroundColor = initialProps.backgroundColor; // RGBA。デフォルトは黒
+function createTileSketch(props: TilesSketchProps): Sketch<TilesSketchProps> {
+    return (p5) => {
+        const columns = props.columns;
+        const tileGap = props.tileGap; // デフォルトのギャップ（ピクセル）
+        const fadeDuration = props.fadeDuration; // クロスフェードの継続時間（ミリ秒）
+        let backgroundColor = props.backgroundColor; // RGBA。デフォルトは黒
 
         let tiles: P5Tiles;
         console.log(`createSketch called::: width=${columns}, height=${tileGap}`);
@@ -30,25 +30,47 @@ function createSketch(initialProps: TilesSketchProps): Sketch<TilesSketchProps> 
             p5.createCanvas(screen.width, 600);
             // 背景色を白に設定
             p5.background(...backgroundColor);
-            console.log(`columns=${columns}, parentHeight=${initialProps.parentHeight}`);
+            console.log(`columns=${columns}, parentHeight=${props.parentHeight}`);
             // 指定した列数で masonry レイアウトを構築
             tiles = new P5Tiles(columns, p5.width, p5.height, tileGap);
 
-            for (const url of initialProps.tileUrls) {
+            for (const url of props.tileUrls) {
                 const tile = new P5Tile(p5, url, fadeDuration, tiles);
                 tiles.addTile(tile);
             }
         }
 
-        p5.updateWithProps = props => {
+        p5.updateWithProps = (props: TilesSketchProps) => {
+            console.log(`:::p5.updateWithProps called::: props=${JSON.stringify(props)}`);
             if (!tiles) {
                 return;
             }
-            if (props.tileUrls) {
-                // タイル画像の更新
-                for (let i = 0; i < props.tileUrls.length; i++) {
-                    tiles.columnsTiles.flat()[i].setUrl(props.tileUrls[i]);
+
+            if (props.columns) {
+                // 列数の変更
+                tiles = new P5Tiles(props.columns, p5.width, p5.height, tiles.gap);
+
+                for (const url of props.tileUrls) {
+                    const tile = new P5Tile(p5, url, fadeDuration, tiles);
+                    tiles.addTile(tile);
                 }
+            }
+
+            if (props.tileUrls) {
+                const alltiles = tiles.columnsTiles.flat();
+                if (alltiles.length !== props.tileUrls.length) {
+                    tiles = new P5Tiles(tiles.columns, p5.width, p5.height, tiles.gap);
+
+                    for (const url of props.tileUrls) {
+                        const tile = new P5Tile(p5, url, fadeDuration, tiles);
+                        tiles.addTile(tile);
+                    }
+    
+                }
+                // タイル画像の更新
+                alltiles.forEach((tile, i) => {
+                    tile.setUrl(props.tileUrls[i]);
+                });
             }
             if (props.parentHeight && props.parentWidth) {
                 // キャンバスサイズの変更(レイアウトも更新)
@@ -67,6 +89,9 @@ function createSketch(initialProps: TilesSketchProps): Sketch<TilesSketchProps> 
                     tile.duration = props.fadeDuration;
                 }
             }
+            if (props.updateFlag) {
+                tiles?.layout();
+            }
         };
 
         p5.draw = () => {
@@ -80,7 +105,6 @@ function createSketch(initialProps: TilesSketchProps): Sketch<TilesSketchProps> 
 }
 
 export interface TilesProps {
-    ref?: RefObject<HTMLDivElement>
     style?: React.CSSProperties;
     tileUrls: string[];
     columns?: number;
@@ -94,12 +118,13 @@ export interface TilesRef {
 
 const Tiles = React.forwardRef<TilesRef, TilesProps>(
     ({ style, tileUrls, columns = 3, tileGap = 20, fadeDuration = 1000 }, ref) => {
-        const { sizeRef, ref: parentRef } = useParentSize();
-        const { width, height } = sizeRef.current;
+
+        const { size, setSize: _setSize, ref: parentRef } = useParentSize();
+        const [backgroundColor, _setBackgroundColor] = useState<[number, number, number, number]>([0, 0, 0, 255]);
+
+        const { width, height } = size;
         // ここで width や height が 0 の場合もあるので、
         // 必要に応じてデフォルト値などで対応します
-        const parentWidth = width || 100;
-        const parentHeight = height || 100;
         console.log(`Tiles rendered:::: width=${width}, height=${height}`);
 
         useImperativeHandle(ref, () => {
@@ -110,19 +135,17 @@ const Tiles = React.forwardRef<TilesRef, TilesProps>(
             };
         }, []);
 
-        const initialProps: TilesSketchProps = useMemo(() => {
-            return {
-                tileUrls: tileUrls,
-                backgroundColor: [0, 0, 0, 255],
-                parentWidth,
-                parentHeight,
-                tileGap,
-                columns,
-                fadeDuration: fadeDuration, // クロスフェードの継続時間（ミリ秒）
-            }
-        }, [tileUrls, parentWidth, parentHeight, tileGap, columns, fadeDuration]);
-
-        const sketch = useMemo(() => createSketch(initialProps), [initialProps]);
+        const initialProps = {
+            tileUrls: tileUrls,
+            backgroundColor,
+            parentWidth: width,
+            parentHeight: height,
+            tileGap,
+            columns,
+            fadeDuration, // クロスフェードの継続時間（ミリ秒）
+            updateFlag: 0,
+        };
+        const sketch = useMemo(() => createTileSketch(initialProps), []);
 
         if (!width || !height) {
             return <div ref={parentRef} style={style} />;
@@ -131,9 +154,10 @@ const Tiles = React.forwardRef<TilesRef, TilesProps>(
         return (
             <div ref={parentRef} style={style}>
                 <ReactP5Wrapper
+                    tileUrls={tileUrls}
                     sketch={sketch}
-                    parentWidth={parentWidth}
-                    parentHeight={parentHeight}
+                    parentWidth={width}
+                    parentHeight={height}
                     tileGap={tileGap}
                     fadeDuration={fadeDuration} />
             </div>

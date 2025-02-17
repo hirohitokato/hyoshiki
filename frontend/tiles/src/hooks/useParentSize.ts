@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 
 // マウントされたコンポーネントの、親要素のサイズを取得するカスタムフック
 export function useParentSize() {
-    const sizeRef = useRef({ width: 0, height: 0 });
+    const [size, setSize] = useState({ width: 0, height: 0 });
     const divRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -12,7 +12,7 @@ export function useParentSize() {
         // サイズを更新する関数
         const updateSize = () => {
             const rect = node.getBoundingClientRect();
-            sizeRef.current = { width: rect.width, height: rect.height };
+            setSize({ width: rect.width, height: rect.height });
         };
 
         // 初回計測
@@ -31,5 +31,5 @@ export function useParentSize() {
         };
     }, []); // 必要に応じて依存関係を追加
 
-    return { sizeRef, ref: divRef };
+    return { size, setSize, ref: divRef };
 }

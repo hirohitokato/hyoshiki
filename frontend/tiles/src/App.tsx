@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, } from 'react';
 import './App.css'
 import Tiles, { TilesRef } from './components/Tiles';
 
@@ -42,7 +42,7 @@ function App() {
   const timer = useRef(0);
 
   // タイル用画像配列（固定長＝tileCount）を管理。個数は tileCount で指定
-  const [tileImages, setTileImages] = useState<string[]>(() => Array(tileCount).fill(""));
+  const [imageUrls, setImageUrls] = useState<string[]>([]);//(() => Array(tileCount).fill(""));
 
   // マウント時に画像リストを取得し、タイル用画像配列を初期化
   useEffect(() => {
@@ -57,7 +57,7 @@ function App() {
           const randomItem = imageItemList[Math.floor(Math.random() * imageItemList.length)];
           newTileImages.push(`${randomItem.url}?t=${Date.now()}`);
         }
-        setTileImages(newTileImages);
+        setImageUrls(newTileImages);
 
         // 次の更新までの遅延を 3000～6000 ミリ秒の間でランダムに決定
         const delay = 1000 + Math.random() * 3000;
@@ -72,11 +72,12 @@ function App() {
 
   const updateRandomTile = () => {
     const randomIndex = Math.floor(Math.random() * tileCount);
-    const url = tileImages[Math.floor(Math.random() * tileImages.length)];
-    
-    setTileImages(draft => {
-      draft[randomIndex] = url;
-      return draft;
+    const url = imageUrls[Math.floor(Math.random() * imageUrls.length)];
+
+    setImageUrls(prev => {
+      const newUrls = [...prev];
+      newUrls[randomIndex] = url;
+      return newUrls;
     });
 
     tilesRef.current?.update();
@@ -88,10 +89,10 @@ function App() {
   return (
     <>
       <h1>みんなの美術館</h1>
-      <Tiles ref={tilesRef}
+      <Tiles
         style={{ width: "80vw", height: "600px" }}
         columns={5}
-        tileUrls={tileImages}
+        tileUrls={imageUrls}
         tileGap={20}>
       </Tiles>
     </>
