@@ -89,7 +89,7 @@ function App() {
   return (
     <>
       <h1>みんなの美術館</h1>
-      <Tiles
+      <Tiles ref={tilesRef}
         style={{ width: "80vw", height: "600px" }}
         columns={5}
         tileUrls={imageUrls}

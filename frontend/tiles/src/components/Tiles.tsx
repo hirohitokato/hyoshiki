@@ -16,6 +16,15 @@ type TilesSketchProps = SketchProps & {
 };
 
 function createTileSketch(props: TilesSketchProps): Sketch<TilesSketchProps> {
+    const createTiles = (p5: import("p5"), columns: number, tileGap: number, tileUrls: string[], fadeDuration: number) => {
+        const tiles = new P5Tiles(columns, p5.width, p5.height, tileGap);
+        tileUrls.forEach(url => {
+            const tile = new P5Tile(p5, url, fadeDuration, tiles);
+            tiles.addTile(tile);
+        });
+        return tiles;
+    };
+
     return (p5) => {
         const columns = props.columns;
         const tileGap = props.tileGap; // デフォルトのギャップ（ピクセル）
@@ -32,12 +41,7 @@ function createTileSketch(props: TilesSketchProps): Sketch<TilesSketchProps> {
             p5.background(...backgroundColor);
             console.log(`columns=${columns}, parentHeight=${props.parentHeight}`);
             // 指定した列数で masonry レイアウトを構築
-            tiles = new P5Tiles(columns, p5.width, p5.height, tileGap);
-
-            for (const url of props.tileUrls) {
-                const tile = new P5Tile(p5, url, fadeDuration, tiles);
-                tiles.addTile(tile);
-            }
+            tiles = createTiles(p5, columns, tileGap, [], fadeDuration);
         }
 
         p5.updateWithProps = (props: TilesSketchProps) => {
@@ -47,25 +51,14 @@ function createTileSketch(props: TilesSketchProps): Sketch<TilesSketchProps> {
             }
 
             if (props.columns) {
-                // 列数の変更
-                tiles = new P5Tiles(props.columns, p5.width, p5.height, tiles.gap);
-
-                for (const url of props.tileUrls) {
-                    const tile = new P5Tile(p5, url, fadeDuration, tiles);
-                    tiles.addTile(tile);
-                }
+                // 列数の変更は最初から作り直し
+                tiles = createTiles(p5, props.columns, tiles.gap, props.tileUrls, fadeDuration);
             }
 
             if (props.tileUrls) {
                 const alltiles = tiles.columnsTiles.flat();
                 if (alltiles.length !== props.tileUrls.length) {
-                    tiles = new P5Tiles(tiles.columns, p5.width, p5.height, tiles.gap);
-
-                    for (const url of props.tileUrls) {
-                        const tile = new P5Tile(p5, url, fadeDuration, tiles);
-                        tiles.addTile(tile);
-                    }
-    
+                    tiles = createTiles(p5, props.columns, tiles.gap, props.tileUrls, fadeDuration);
                 }
                 // タイル画像の更新
                 alltiles.forEach((tile, i) => {
@@ -153,13 +146,17 @@ const Tiles = React.forwardRef<TilesRef, TilesProps>(
 
         return (
             <div ref={parentRef} style={style}>
-                <ReactP5Wrapper
-                    tileUrls={tileUrls}
-                    sketch={sketch}
-                    parentWidth={width}
-                    parentHeight={height}
-                    tileGap={tileGap}
-                    fadeDuration={fadeDuration} />
+                {(!width || !height) ? (
+                    <p>Loading...</p>
+                ) : (
+                    <ReactP5Wrapper
+                        tileUrls={tileUrls}
+                        sketch={sketch}
+                        parentWidth={width}
+                        parentHeight={height}
+                        tileGap={tileGap}
+                        fadeDuration={fadeDuration} />
+                )}
             </div>
         )
     });
